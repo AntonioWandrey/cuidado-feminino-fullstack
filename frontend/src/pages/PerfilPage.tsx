@@ -95,13 +95,13 @@ const PerfilPage = () => {
             <FieldError field="name" />
           </div>
           <div>
-            <label className="text-xs font-semibold text-muted-foreground mb-1 block">Data de nascimento</label>
-            <input type="date" value={profile.birthDate} onChange={(e) => update("birthDate", e.target.value)} className={errors.birthDate ? errorInputClass : inputClass} />
+            <label htmlFor="birthDate" className="text-xs font-semibold text-muted-foreground mb-1 block">Data de nascimento</label>
+            <input id="birthDate" type="date" value={profile.birthDate} onChange={(e) => update("birthDate", e.target.value)} className={errors.birthDate ? errorInputClass : inputClass} />
             <FieldError field="birthDate" />
           </div>
           <div>
-            <label className="text-xs font-semibold text-muted-foreground mb-1 block">E-mail</label>
-            <input type="email" value={profile.email} onChange={(e) => update("email", e.target.value)} placeholder="seu@email.com" maxLength={120} className={errors.email ? errorInputClass : inputClass} />
+            <label htmlFor="email" className="text-xs font-semibold text-muted-foreground mb-1 block">E-mail</label>
+            <input id="email" type="email" value={profile.email} onChange={(e) => update("email", e.target.value)} placeholder="seu@email.com" maxLength={120} className={errors.email ? errorInputClass : inputClass} />
             <FieldError field="email" />
           </div>
           <div>
@@ -110,8 +110,8 @@ const PerfilPage = () => {
             <FieldError field="phone" />
           </div>
           <div>
-            <label className="text-xs font-semibold text-muted-foreground mb-1 block">Duração média do ciclo (dias)</label>
-            <input type="number" value={profile.cycleLength} onChange={(e) => update("cycleLength", e.target.value)} min="20" max="45" className={errors.cycleLength ? errorInputClass : inputClass} />
+            <label htmlFor="ciclo" className="text-xs font-semibold text-muted-foreground mb-1 block">Duração média do ciclo (dias)</label>
+            <input id="ciclo" type="number" value={profile.cycleLength} onChange={(e) => update("cycleLength", e.target.value)} min="20" max="45" className={errors.cycleLength ? errorInputClass : inputClass} />
             <FieldError field="cycleLength" />
           </div>
           <div className="flex items-center justify-between bg-card border border-border rounded-2xl p-4">

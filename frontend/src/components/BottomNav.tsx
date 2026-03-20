@@ -32,7 +32,9 @@ const BottomNav = ({ activeTab, onTabChange }: BottomNavProps) => {
               )}
             >
               <Icon size={22} strokeWidth={isActive ? 2.5 : 1.8} />
-              <span className={cn("text-[10px]", isActive ? "font-bold" : "font-medium")}>
+              <span 
+              translate="no"
+              className={cn("text-[10px]", isActive ? "font-bold" : "font-medium")}>
                 {tab.label}
               </span>
             </button>

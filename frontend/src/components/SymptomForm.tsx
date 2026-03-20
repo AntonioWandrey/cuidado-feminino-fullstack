@@ -1,8 +1,15 @@
 import { useState } from "react";
-import { X, AlertTriangle, ThermometerSun, Droplets, MapPin } from "lucide-react";
+import {
+  X,
+  AlertTriangle,
+  ThermometerSun,
+  Droplets,
+  MapPin,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { symptomLogSchema } from "@/lib/validations";
+import api from "@/services/api";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface SymptomFormProps {
   open: boolean;
@@ -56,21 +63,25 @@ const SymptomForm = ({ open, onClose }: SymptomFormProps) => {
     dischargeOptions.find((o) => o.value === discharge)?.alert ||
     otherAlerts.some((s) => otherAlertOptions.find((o) => o.value === s)?.alert);
 
-  const handleSubmit = () => {
-    const result = symptomLogSchema.safeParse({
-      mood,
-      symptoms,
-      discharge: discharge || undefined,
-      otherSigns: otherAlerts,
-    });
-
-    if (!result.success) {
-      setValidationError("Selecione como você está se sentindo.");
+  const handleSubmit = async () => {
+    if (!mood) {
+      setValidationError("Por favor, selecione como você está se sentindo antes de enviar.");
       return;
     }
 
-    setValidationError("");
-    setSubmitted(true);
+    try {
+      const dadosParaOBanco = {
+        faseVida: mood,
+        corMuco: discharge || "Não informado",
+        possuiOdor: otherAlerts.includes("odor_forte"),
+        dorPelvica: symptoms.includes("dor_pelvica"),
+      };
+
+      await api.post("/registrar", dadosParaOBanco);
+      setSubmitted(true);
+    } catch (error) {
+      console.error("Erro ao salvar no MySQL:", error);
+    }
   };
 
   const handleReset = () => {
@@ -84,7 +95,7 @@ const SymptomForm = ({ open, onClose }: SymptomFormProps) => {
   };
 
   const openMaps = () => {
-    window.open("https://www.google.com/maps/search/UBS+Unidade+Básica+de+Saúde", "_blank", "noopener,noreferrer");
+    window.open("https://www.google.com/maps/search/UBS+proxima", "_blank");
   };
 
   if (!open) return null;
@@ -98,118 +109,116 @@ const SymptomForm = ({ open, onClose }: SymptomFormProps) => {
     );
 
   return (
-    <div className="fixed inset-0 z-50 bg-foreground/30 flex items-end justify-center">
-      <div className="bg-background w-full max-w-lg rounded-t-3xl max-h-[85vh] overflow-y-auto animate-in slide-in-from-bottom duration-300">
-        <div className="sticky top-0 bg-background z-10 flex items-center justify-between p-4 border-b border-border">
+<div className="fixed inset-0 z-[80] bg-black/60 flex items-end justify-center backdrop-blur-sm">
+<div className="bg-background w-full max-w-lg rounded-t-3xl max-h-[90vh] flex flex-col animate-in slide-in-from-bottom duration-300">
+        
+        {/* Header Fixo */}
+        <div className="flex items-center justify-between p-5 border-b border-border">
           <h2 className="font-bold text-lg text-foreground">Check-up de Sinais</h2>
           <button onClick={handleReset} className="p-1 rounded-full hover:bg-muted">
             <X size={20} className="text-muted-foreground" />
           </button>
         </div>
 
-        <div className="p-4 space-y-6">
-          {!submitted ? (
-            <>
-              {/* Mood */}
-              <div>
-                <h3 className="font-semibold text-sm text-foreground mb-2">Como você está se sentindo?</h3>
-                <div className="grid grid-cols-2 gap-2">
-                  {moodOptions.map((m) => (
-                    <button key={m.value} onClick={() => { setMood(m.value); setValidationError(""); }} className={cn("p-3 rounded-2xl border text-sm font-medium transition-all", mood === m.value ? "border-primary bg-accent text-accent-foreground" : "border-border bg-card text-foreground hover:border-primary/50")}>
-                      {m.label}
-                    </button>
-                  ))}
-                </div>
-                {validationError && (
-                  <p className="text-xs text-destructive mt-2">{validationError}</p>
-                )}
-              </div>
-
-              {/* Symptoms */}
-              <div>
-                <h3 className="font-semibold text-sm text-foreground mb-2">Sintomas físicos</h3>
-                <div className="flex flex-wrap gap-2">
-                  {symptomOptions.map((s) => (
-                    <button key={s.value} onClick={() => toggle(symptoms, s.value, setSymptoms)} className={chipClass(symptoms.includes(s.value))}>
-                      {s.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Discharge */}
-              <div>
-                <h3 className="font-semibold text-sm text-foreground mb-2 flex items-center gap-1.5">
-                  <Droplets size={14} strokeWidth={1.8} /> Corrimento — Coloração e aspecto
-                </h3>
-                <div className="flex flex-wrap gap-2">
-                  {dischargeOptions.map((d) => (
-                    <button key={d.value} onClick={() => setDischarge(d.value)} className={chipClass(discharge === d.value)}>
-                      {d.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Other alerts */}
-              <div>
-                <h3 className="font-semibold text-sm text-foreground mb-2">Outros sinais</h3>
-                <div className="flex flex-wrap gap-2">
-                  {otherAlertOptions.map((o) => (
-                    <button key={o.value} onClick={() => toggle(otherAlerts, o.value, setOtherAlerts)} className={chipClass(otherAlerts.includes(o.value))}>
-                      {o.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Alert card */}
-              {hasAlertSymptom && (
-                <div className="rounded-2xl border border-warning bg-warning-bg p-4 space-y-3">
-                  <div className="flex gap-3 items-start">
-                    <AlertTriangle size={22} className="text-warning shrink-0 mt-0.5" />
-                    <div>
-                      <p className="font-bold text-sm text-warning-foreground">AVISO</p>
-                      <p className="text-xs text-warning-foreground/80 mt-1 leading-relaxed">
-                        Seus sintomas sugerem a necessidade de avaliação profissional. Procure a Unidade Básica de Saúde (Postinho) mais próxima para exame físico e orientação.
-                      </p>
-                    </div>
+        {/* Área de Scroll - Conteúdo do Form */}
+        <ScrollArea className="flex-1 overflow-y-auto pr-4">
+          <div className="p-5 space-y-8 pb-10">
+            {!submitted ? (
+              <>
+                {/* Humor */}
+                <div>
+                  <h3 className="font-semibold text-sm text-foreground mb-3">Como você está se sentindo?</h3>
+                  <div className="grid grid-cols-2 gap-2">
+                    {moodOptions.map((m) => (
+                      <button
+                        key={m.value}
+                        onClick={() => { setMood(m.value); setValidationError(""); }}
+                        className={cn(
+                          "p-3 rounded-2xl border text-sm font-medium transition-all",
+                          mood === m.value ? "border-primary bg-accent text-accent-foreground" : "border-border bg-card text-foreground"
+                        )}
+                      >
+                        {m.label}
+                      </button>
+                    ))}
                   </div>
-                  <Button onClick={openMaps} variant="outline" size="sm" className="w-full rounded-2xl gap-2 border-warning text-warning-foreground hover:bg-warning/10">
-                    <MapPin size={14} /> Localizar UBS via Maps
-                  </Button>
+                  {validationError && <p className="text-xs text-destructive mt-2">{validationError}</p>}
                 </div>
-              )}
 
-              <Button onClick={handleSubmit} className="w-full rounded-2xl" size="lg">
-                Registrar sintomas
-              </Button>
-            </>
-          ) : (
-            <div className="text-center py-8 space-y-3">
-              <div className="mx-auto w-14 h-14 rounded-full bg-accent flex items-center justify-center">
-                <ThermometerSun size={28} className="text-primary" />
-              </div>
-              <h3 className="font-bold text-foreground">Registrado com sucesso!</h3>
-              <p className="text-sm text-muted-foreground">
-                Seus sintomas foram salvos. Continue monitorando seu bem-estar.
-              </p>
-              {hasAlertSymptom && (
-                <div className="rounded-2xl border border-warning bg-warning-bg p-4 space-y-3 text-left mt-4">
-                  <p className="text-xs text-warning-foreground font-medium">
-                    ⚠️ Lembre-se: procure uma UBS para avaliação dos sintomas relatados.
-                  </p>
-                  <Button onClick={openMaps} variant="outline" size="sm" className="w-full rounded-2xl gap-2 border-warning text-warning-foreground hover:bg-warning/10">
-                    <MapPin size={14} /> Localizar UBS via Maps
-                  </Button>
+                {/* Sintomas */}
+                <div>
+                  <h3 className="font-semibold text-sm text-foreground mb-3">Sintomas físicos</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {symptomOptions.map((s) => (
+                      <button key={s.value} onClick={() => toggle(symptoms, s.value, setSymptoms)} className={chipClass(symptoms.includes(s.value))}>
+                        {s.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              )}
-              <Button onClick={handleReset} variant="outline" className="mt-4 rounded-2xl">
-                Fechar
-              </Button>
-            </div>
-          )}
-        </div>
+
+                {/* Corrimento */}
+                <div>
+                  <h3 className="font-semibold text-sm text-foreground mb-3 flex items-center gap-1.5">
+                    <Droplets size={14} /> Corrimento — Coloração e aspecto
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    {dischargeOptions.map((d) => (
+                      <button key={d.value} onClick={() => setDischarge(d.value)} className={chipClass(discharge === d.value)}>
+                        {d.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Outros Sinais */}
+                <div>
+                  <h3 className="font-semibold text-sm text-foreground mb-3">Outros sinais</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {otherAlertOptions.map((o) => (
+                      <button key={o.value} onClick={() => toggle(otherAlerts, o.value, setOtherAlerts)} className={chipClass(otherAlerts.includes(o.value))}>
+                        {o.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Card de Alerta (Só aparece se houver sintomas críticos) */}
+                {hasAlertSymptom && (
+                  <div className="rounded-2xl border border-warning bg-warning-bg p-4 space-y-3">
+                    <div className="flex gap-3 items-start">
+                      <AlertTriangle size={22} className="text-warning shrink-0 mt-0.5" />
+                      <div>
+                        <p className="font-bold text-sm text-warning-foreground text-left">AVISO</p>
+                        <p className="text-xs text-warning-foreground/80 mt-1 leading-relaxed text-left">
+                          Seus sintomas sugerem a necessidade de avaliação profissional. Procure a UBS mais próxima.
+                        </p>
+                      </div>
+                    </div>
+                    <Button onClick={openMaps} variant="outline" size="sm" className="w-full rounded-2xl gap-2 border-warning text-warning-foreground">
+                      <MapPin size={14} /> Localizar UBS via Maps
+                    </Button>
+                  </div>
+                )}
+
+                {/* BOTÃO DE REGISTRO - SEMPRE VISÍVEL NO FINAL DO CONTEÚDO */}
+                <Button onClick={handleSubmit} className="w-full rounded-2xl py-6 text-md font-bold shadow-lg mt-4" size="lg">
+                  Registrar Check-up
+                </Button>
+              </>
+            ) : (
+              /* Tela de Sucesso */
+              <div className="text-center py-10 space-y-4">
+                <div className="mx-auto w-16 h-16 rounded-full bg-accent flex items-center justify-center">
+                  <ThermometerSun size={32} className="text-primary" />
+                </div>
+                <h3 className="font-bold text-xl text-foreground">Registrado com sucesso!</h3>
+                <p className="text-sm text-muted-foreground">Seus sintomas foram salvos.</p>
+                <Button onClick={handleReset} variant="outline" className="mt-6 rounded-2xl px-10">Fechar</Button>
+              </div>
+            )}
+          </div>
+        </ScrollArea>
       </div>
     </div>
   );
