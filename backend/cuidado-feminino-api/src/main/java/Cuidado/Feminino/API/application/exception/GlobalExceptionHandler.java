@@ -7,6 +7,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.time.LocalDateTime;
 import java.util.Map;
@@ -21,6 +22,28 @@ public class GlobalExceptionHandler {
         log.warn("Ciclo não encontrado: {}", ex.getMessage());
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(new ErroResponse(HttpStatus.NOT_FOUND.value(), ex.getMessage()));
+    }
+
+    @ExceptionHandler(CategoriaConteudoNaoEncontradaException.class)
+    public ResponseEntity<ErroResponse> handleCategoriaConteudoNaoEncontrada(CategoriaConteudoNaoEncontradaException ex) {
+        log.warn("Categoria de conteúdo não encontrada: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(new ErroResponse(HttpStatus.NOT_FOUND.value(), ex.getMessage()));
+    }
+
+    @ExceptionHandler(ConteudoEducativoNaoEncontradoException.class)
+    public ResponseEntity<ErroResponse> handleConteudoEducativoNaoEncontrado(ConteudoEducativoNaoEncontradoException ex) {
+        log.warn("Conteúdo educativo não encontrado: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(new ErroResponse(HttpStatus.NOT_FOUND.value(), ex.getMessage()));
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ErroResponse> handleTipoInvalido(MethodArgumentTypeMismatchException ex) {
+        String mensagem = "Valor inválido para o parâmetro '" + ex.getName() + "': " + ex.getValue();
+        log.warn("Tipo inválido: {}", mensagem);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ErroResponse(HttpStatus.BAD_REQUEST.value(), mensagem));
     }
 
     @ExceptionHandler(CicloEmAbertoException.class)
