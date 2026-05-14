@@ -1,0 +1,4 @@
+# Copie este arquivo para application-local.properties e ajuste as credenciais
+spring.datasource.url=jdbc:mysql://localhost:3306/cuidado_feminino?createDatabaseIfNotExist=true&serverTimezone=UTC
+spring.datasource.username=SEU_USUARIO
+spring.datasource.password=SUA_SENHA
