@@ -21,8 +21,10 @@ public interface ConteudoEducativoRepository extends JpaRepository<ConteudoEduca
     @Query("""
             SELECT c FROM ConteudoEducativo c
             WHERE c.ativo = true
-              AND LOWER(c.palavrasChave) LIKE LOWER(CONCAT('%', :termo, '%'))
+              AND (LOWER(c.titulo) LIKE LOWER(CONCAT('%', :termo, '%'))
+               OR LOWER(c.subtitulo) LIKE LOWER(CONCAT('%', :termo, '%'))
+               OR LOWER(c.palavrasChave) LIKE LOWER(CONCAT('%', :termo, '%')))
             ORDER BY c.titulo ASC
             """)
-    List<ConteudoEducativo> buscarPorPalavraChave(@Param("termo") String termo);
+    List<ConteudoEducativo> buscarPorTermo(@Param("termo") String termo);
 }

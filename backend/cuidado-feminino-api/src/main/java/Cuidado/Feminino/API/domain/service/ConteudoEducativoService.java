@@ -75,7 +75,7 @@ public class ConteudoEducativoService {
         if (!StringUtils.hasText(termo)) {
             return listarAtivos();
         }
-        return repository.buscarPorPalavraChave(termo.trim())
+        return repository.buscarPorTermo(termo.trim())
                 .stream()
                 .map(ConteudoEducativoResponse::de)
                 .toList();

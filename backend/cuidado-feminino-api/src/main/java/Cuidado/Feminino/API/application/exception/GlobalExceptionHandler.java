@@ -38,6 +38,13 @@ public class GlobalExceptionHandler {
                 .body(new ErroResponse(HttpStatus.NOT_FOUND.value(), ex.getMessage()));
     }
 
+    @ExceptionHandler(SerieConteudoNaoEncontradaException.class)
+    public ResponseEntity<ErroResponse> handleSerieConteudoNaoEncontrada(SerieConteudoNaoEncontradaException ex) {
+        log.warn("Série de conteúdo não encontrada: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(new ErroResponse(HttpStatus.NOT_FOUND.value(), ex.getMessage()));
+    }
+
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<ErroResponse> handleTipoInvalido(MethodArgumentTypeMismatchException ex) {
         String mensagem = "Valor inválido para o parâmetro '" + ex.getName() + "': " + ex.getValue();
