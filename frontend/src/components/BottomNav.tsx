@@ -1,4 +1,4 @@
-import { Home, BookOpen, CalendarDays, User } from "lucide-react";
+import { Home, CalendarDays, BookOpen, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface BottomNavProps {
@@ -7,15 +7,18 @@ interface BottomNavProps {
 }
 
 const tabs = [
-  { id: "home", label: "Início", icon: Home },
-  { id: "trilhas", label: "Trilhas", icon: BookOpen },
+  { id: "home", label: "Home", icon: Home },
   { id: "calendario", label: "Calendário", icon: CalendarDays },
+  { id: "conteudos", label: "Conteúdos", icon: BookOpen },
   { id: "perfil", label: "Perfil", icon: User },
 ];
 
 const BottomNav = ({ activeTab, onTabChange }: BottomNavProps) => {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border">
+    <nav
+      className="fixed bottom-0 left-0 right-0 z-50 border-t"
+      style={{ backgroundColor: "#fff", borderColor: "#FBD9E5" }}
+    >
       <div className="flex justify-around items-center h-16 max-w-lg mx-auto">
         {tabs.map((tab) => {
           const Icon = tab.icon;
@@ -25,16 +28,15 @@ const BottomNav = ({ activeTab, onTabChange }: BottomNavProps) => {
               key={tab.id}
               onClick={() => onTabChange(tab.id)}
               className={cn(
-                "flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all duration-200",
-                isActive
-                  ? "text-primary"
-                  : "text-muted-foreground hover:text-foreground"
+                "flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all duration-200"
               )}
+              style={{ color: isActive ? "#C43A4A" : "#9ca3af" }}
             >
               <Icon size={22} strokeWidth={isActive ? 2.5 : 1.8} />
-              <span 
-              translate="no"
-              className={cn("text-[10px]", isActive ? "font-bold" : "font-medium")}>
+              <span
+                translate="no"
+                className={cn("text-[10px]", isActive ? "font-bold" : "font-medium")}
+              >
                 {tab.label}
               </span>
             </button>

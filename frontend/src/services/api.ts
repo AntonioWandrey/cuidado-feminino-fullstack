@@ -1,7 +1,8 @@
-import axios from 'axios';
+import axios from "axios";
 
 const api = axios.create({
-  baseURL: 'http://localhost:8080/api/saude', // Endereço do seu Spring Boot
+  baseURL: "http://localhost:8080",
+  headers: { "Content-Type": "application/json" },
 });
 
 export default api;

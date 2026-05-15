@@ -1,186 +1,199 @@
-import { useState } from "react";
-import { User, Bell, Shield, HelpCircle, LogOut, Save, ArrowLeft, AlertCircle } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import { profileSchema, type ProfileFormData } from "@/lib/validations";
+import { useQuery } from "@tanstack/react-query";
+import {
+  Bell,
+  ChevronRight,
+  HelpCircle,
+  LogOut,
+  Settings,
+  Shield,
+  User,
+} from "lucide-react";
+import { getCiclos } from "@/services/cicloService";
+import { getPrevisao } from "@/services/cicloService";
 
-interface ProfileData {
-  name: string;
-  birthDate: string;
-  email: string;
-  phone: string;
-  cycleLength: string;
-  notifications: boolean;
-}
-
-const defaultProfile: ProfileData = {
-  name: "",
-  birthDate: "",
-  email: "",
-  phone: "",
-  cycleLength: "28",
-  notifications: true,
-};
+const MenuItem = ({
+  icon: Icon,
+  label,
+  sub,
+  color = "#6b5a5e",
+}: {
+  icon: React.ElementType;
+  label: string;
+  sub?: string;
+  color?: string;
+}) => (
+  <button
+    className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl transition-opacity active:opacity-70"
+    style={{ backgroundColor: "#fff", border: "1px solid #FBD9E5" }}
+  >
+    <div
+      className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+      style={{ backgroundColor: "#FBD9E5" }}
+    >
+      <Icon size={18} style={{ color }} />
+    </div>
+    <div className="flex-1 text-left">
+      <p className="text-sm font-semibold" style={{ color: "#3d2529" }}>
+        {label}
+      </p>
+      {sub && (
+        <p className="text-xs" style={{ color: "#9ca3af" }}>
+          {sub}
+        </p>
+      )}
+    </div>
+    <ChevronRight size={16} style={{ color: "#C56682" }} />
+  </button>
+);
 
 const PerfilPage = () => {
-  const [editing, setEditing] = useState(false);
-  const [profile, setProfile] = useState<ProfileData>(defaultProfile);
-  const [saved, setSaved] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const { data: ciclos } = useQuery({
+    queryKey: ["ciclos"],
+    queryFn: getCiclos,
+    retry: 1,
+  });
 
-  const update = (field: keyof ProfileData, value: string | boolean) => {
-    setProfile((prev) => ({ ...prev, [field]: value }));
-    setErrors((prev) => {
-      const next = { ...prev };
-      delete next[field];
-      return next;
-    });
-  };
+  const { data: previsao } = useQuery({
+    queryKey: ["previsao"],
+    queryFn: getPrevisao,
+    retry: 1,
+  });
 
-  const handleSave = () => {
-    const parsed = profileSchema.safeParse({
-      name: profile.name,
-      birthDate: profile.birthDate || undefined,
-      email: profile.email,
-      phone: profile.phone,
-      cycleLength: parseInt(profile.cycleLength) || 28,
-      notifications: profile.notifications,
-    });
+  const ciclosRegistrados = ciclos?.length ?? 0;
+  const mediaCiclo = previsao ? Math.round(previsao.mediaDuracaoCiclo) : null;
+  const confianca = previsao?.confianca;
 
-    if (!parsed.success) {
-      const fieldErrors: Record<string, string> = {};
-      parsed.error.errors.forEach((e) => {
-        const field = e.path[0] as string;
-        fieldErrors[field] = e.message;
-      });
-      setErrors(fieldErrors);
-      return;
-    }
-
-    setErrors({});
-    setSaved(true);
-    setTimeout(() => {
-      setSaved(false);
-      setEditing(false);
-    }, 1500);
-  };
-
-  const inputClass =
-    "w-full bg-background border border-border rounded-2xl px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring";
-  const errorInputClass =
-    "w-full bg-background border border-destructive rounded-2xl px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-destructive";
-
-  const FieldError = ({ field }: { field: string }) =>
-    errors[field] ? (
-      <p className="text-xs text-destructive mt-1 flex items-center gap-1">
-        <AlertCircle size={12} /> {errors[field]}
-      </p>
-    ) : null;
-
-  if (editing) {
-    return (
-      <div className="space-y-5">
-        <button
-          onClick={() => setEditing(false)}
-          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <ArrowLeft size={16} /> Voltar
-        </button>
-        <h1 className="text-xl font-bold text-foreground">Dados Pessoais</h1>
-
-        <div className="space-y-4">
-          <div>
-            <label className="text-xs font-semibold text-muted-foreground mb-1 block">Nome completo</label>
-            <input type="text" value={profile.name} onChange={(e) => update("name", e.target.value)} placeholder="Seu nome" maxLength={80} className={errors.name ? errorInputClass : inputClass} />
-            <FieldError field="name" />
-          </div>
-          <div>
-            <label htmlFor="birthDate" className="text-xs font-semibold text-muted-foreground mb-1 block">Data de nascimento</label>
-            <input id="birthDate" type="date" value={profile.birthDate} onChange={(e) => update("birthDate", e.target.value)} className={errors.birthDate ? errorInputClass : inputClass} />
-            <FieldError field="birthDate" />
-          </div>
-          <div>
-            <label htmlFor="email" className="text-xs font-semibold text-muted-foreground mb-1 block">E-mail</label>
-            <input id="email" type="email" value={profile.email} onChange={(e) => update("email", e.target.value)} placeholder="seu@email.com" maxLength={120} className={errors.email ? errorInputClass : inputClass} />
-            <FieldError field="email" />
-          </div>
-          <div>
-            <label className="text-xs font-semibold text-muted-foreground mb-1 block">Telefone</label>
-            <input type="tel" value={profile.phone} onChange={(e) => update("phone", e.target.value)} placeholder="(00) 00000-0000" maxLength={20} className={errors.phone ? errorInputClass : inputClass} />
-            <FieldError field="phone" />
-          </div>
-          <div>
-            <label htmlFor="ciclo" className="text-xs font-semibold text-muted-foreground mb-1 block">Duração média do ciclo (dias)</label>
-            <input id="ciclo" type="number" value={profile.cycleLength} onChange={(e) => update("cycleLength", e.target.value)} min="20" max="45" className={errors.cycleLength ? errorInputClass : inputClass} />
-            <FieldError field="cycleLength" />
-          </div>
-          <div className="flex items-center justify-between bg-card border border-border rounded-2xl p-4">
-            <div>
-              <p className="font-semibold text-sm text-foreground">Notificações</p>
-              <p className="text-xs text-muted-foreground">Receber lembretes e alertas</p>
-            </div>
-            <button
-              onClick={() => update("notifications", !profile.notifications)}
-              className={cn(
-                "w-11 h-6 rounded-full transition-colors relative",
-                profile.notifications ? "bg-primary" : "bg-muted"
-              )}
-            >
-              <div className={cn("absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform", profile.notifications ? "left-[22px]" : "left-0.5")} />
-            </button>
-          </div>
-        </div>
-
-        <Button onClick={handleSave} className="w-full rounded-2xl gap-2" size="lg">
-          {saved ? "✓ Salvo!" : <><Save size={16} /> Salvar dados</>}
-        </Button>
-      </div>
-    );
-  }
-
-  const menuItems = [
-    { icon: User, label: "Dados pessoais", desc: "Nome, idade e informações", action: () => setEditing(true) },
-    { icon: Bell, label: "Notificações", desc: "Alertas e lembretes" },
-    { icon: Shield, label: "Privacidade", desc: "Segurança dos seus dados" },
-    { icon: HelpCircle, label: "Ajuda", desc: "Perguntas frequentes" },
-  ];
+  const regularidade =
+    confianca === "ALTA"
+      ? "Regular"
+      : confianca === "MEDIA"
+      ? "Moderada"
+      : ciclosRegistrados === 0
+      ? "Sem dados"
+      : "Irregular";
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col items-center text-center">
-        <div className="w-20 h-20 rounded-full bg-accent flex items-center justify-center">
-          <User size={36} className="text-primary" strokeWidth={1.5} />
+    <div className="space-y-5">
+      {/* Header */}
+      <h1 className="text-2xl font-bold" style={{ color: "#3d2529" }}>
+        Perfil
+      </h1>
+
+      {/* Avatar + nome */}
+      <div
+        className="rounded-2xl p-5 flex items-center gap-4 shadow-sm"
+        style={{ backgroundColor: "#fff", border: "1px solid #FBD9E5" }}
+      >
+        <div
+          className="w-16 h-16 rounded-full flex items-center justify-center flex-shrink-0"
+          style={{ backgroundColor: "#C43A4A" }}
+        >
+          <span className="text-3xl">🌺</span>
         </div>
-        <h1 className="text-lg font-bold text-foreground mt-3">
-          {profile.name || "Usuária"}
-        </h1>
-        <p className="text-sm text-muted-foreground">Cuidando da minha saúde 💕</p>
+        <div>
+          <p className="text-lg font-bold" style={{ color: "#3d2529" }}>
+            Minha Conta
+          </p>
+          <p className="text-sm" style={{ color: "#C56682" }}>
+            MS Feminina
+          </p>
+        </div>
       </div>
 
-      <div className="space-y-2">
-        {menuItems.map((item, i) => {
-          const Icon = item.icon;
-          return (
-            <button
-              key={i}
-              onClick={item.action}
-              className="w-full bg-card border border-border rounded-2xl p-4 flex items-center gap-3 shadow-sm hover:shadow-md transition-shadow text-left"
+      {/* Estatísticas do ciclo */}
+      <div>
+        <p className="text-xs font-bold mb-2 px-1" style={{ color: "#C56682" }}>
+          MEU CICLO
+        </p>
+        <div className="grid grid-cols-3 gap-2">
+          {[
+            {
+              valor: String(ciclosRegistrados),
+              label: "Ciclos registrados",
+            },
+            {
+              valor: mediaCiclo ? `${mediaCiclo}d` : "—",
+              label: "Duração média",
+            },
+            {
+              valor: regularidade,
+              label: "Regularidade",
+            },
+          ].map(({ valor, label }) => (
+            <div
+              key={label}
+              className="rounded-2xl p-3 text-center shadow-sm"
+              style={{ backgroundColor: "#fff", border: "1px solid #FBD9E5" }}
             >
-              <div className="p-2 rounded-xl bg-accent">
-                <Icon size={18} className="text-primary" strokeWidth={1.8} />
-              </div>
-              <div>
-                <p className="font-semibold text-sm text-foreground">{item.label}</p>
-                <p className="text-xs text-muted-foreground">{item.desc}</p>
-              </div>
-            </button>
-          );
-        })}
+              <p
+                className="text-xl font-bold"
+                style={{ color: "#C43A4A" }}
+              >
+                {valor}
+              </p>
+              <p
+                className="text-[10px] mt-0.5 leading-tight"
+                style={{ color: "#9ca3af" }}
+              >
+                {label}
+              </p>
+            </div>
+          ))}
+        </div>
       </div>
 
-      <button className="w-full flex items-center justify-center gap-2 py-3 text-sm text-muted-foreground hover:text-destructive transition-colors">
-        <LogOut size={16} /> Sair da conta
+      {/* Menu */}
+      <div className="space-y-2">
+        <p className="text-xs font-bold mb-2 px-1" style={{ color: "#C56682" }}>
+          CONFIGURAÇÕES
+        </p>
+        <MenuItem
+          icon={Settings}
+          label="Configurações"
+          sub="Notificações e preferências"
+          color="#C43A4A"
+        />
+        <MenuItem
+          icon={Bell}
+          label="Lembretes"
+          sub="Anticoncepcional, consultas, exames"
+          color="#C43A4A"
+        />
+        <MenuItem
+          icon={Shield}
+          label="Privacidade e LGPD"
+          sub="Seus dados são seus"
+          color="#4A90C4"
+        />
+        <MenuItem
+          icon={HelpCircle}
+          label="Ajuda e Suporte"
+          sub="Tire suas dúvidas"
+          color="#E8B84A"
+        />
+        <MenuItem
+          icon={User}
+          label="Editar Perfil"
+          sub="Nome, data de nascimento"
+          color="#C56682"
+        />
+      </div>
+
+      {/* Sair */}
+      <button
+        className="w-full flex items-center justify-center gap-2 rounded-2xl p-3.5 text-sm font-semibold"
+        style={{ backgroundColor: "#FBD9E5", color: "#C43A4A" }}
+      >
+        <LogOut size={16} />
+        Sair da conta
       </button>
+
+      {/* Versão */}
+      <p className="text-center text-xs py-2" style={{ color: "#9ca3af" }}>
+        MS Feminina v0.1.0 · Sprint 02
+        <br />
+        ⚠️ As informações deste app não substituem avaliação médica.
+      </p>
     </div>
   );
 };

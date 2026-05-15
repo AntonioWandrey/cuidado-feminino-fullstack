@@ -55,6 +55,15 @@ export default {
           foreground: "hsl(var(--warning-foreground))",
           bg: "hsl(var(--warning-bg))",
         },
+        femina: {
+          creme: "#FBF4EB",
+          rosa: "#FBD9E5",
+          cereja: "#C43A4A",
+          mauve: "#C56682",
+          pessego: "#E7A48C",
+          azul: "#4A90C4",
+          amarelo: "#E8B84A",
+        },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",

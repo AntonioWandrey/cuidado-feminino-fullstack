@@ -77,7 +77,7 @@ const SymptomForm = ({ open, onClose }: SymptomFormProps) => {
         dorPelvica: symptoms.includes("dor_pelvica"),
       };
 
-      await api.post("/registrar", dadosParaOBanco);
+      await api.post("/api/saude/registrar", dadosParaOBanco);
       setSubmitted(true);
     } catch (error) {
       console.error("Erro ao salvar no MySQL:", error);

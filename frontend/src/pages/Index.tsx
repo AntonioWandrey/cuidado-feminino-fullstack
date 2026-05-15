@@ -1,21 +1,24 @@
 import { useState } from "react";
+import { useLocation } from "react-router-dom";
 import BottomNav from "@/components/BottomNav";
 import HomePage from "@/pages/HomePage";
-import TrilhasPage from "@/pages/TrilhasPage";
 import CalendarioPage from "@/pages/CalendarioPage";
+import ConteudosPage from "@/pages/ConteudosPage";
 import PerfilPage from "@/pages/PerfilPage";
 
 const Index = () => {
-  const [activeTab, setActiveTab] = useState("home");
+  const location = useLocation();
+  const returnTab = (location.state as { returnTab?: string } | null)?.returnTab;
+  const [activeTab, setActiveTab] = useState(returnTab || "home");
 
   const renderPage = () => {
     switch (activeTab) {
       case "home":
         return <HomePage onNavigate={setActiveTab} />;
-      case "trilhas":
-        return <TrilhasPage />;
       case "calendario":
         return <CalendarioPage />;
+      case "conteudos":
+        return <ConteudosPage />;
       case "perfil":
         return <PerfilPage />;
       default:
@@ -24,7 +27,7 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen" style={{ backgroundColor: "#FBF4EB" }}>
       <div className="max-w-lg mx-auto px-4 pt-6 pb-24">
         {renderPage()}
       </div>
