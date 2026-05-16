@@ -4,26 +4,30 @@
 
 @layer base {
   :root {
-    --background: 340 33% 98%;
-    --foreground: 340 30% 15%;
+    /* Creme #FBF4EB */
+    --background: 35 67% 95%;
+    --foreground: 340 30% 18%;
 
     --card: 0 0% 100%;
-    --card-foreground: 340 30% 15%;
+    --card-foreground: 340 30% 18%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 340 30% 15%;
+    --popover-foreground: 340 30% 18%;
 
-    --primary: 330 65% 60%;
+    /* Vermelho Cereja #C43A4A */
+    --primary: 354 54% 50%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 270 30% 94%;
-    --secondary-foreground: 270 30% 30%;
+    /* Rosa Claro #FBD9E5 */
+    --secondary: 340 83% 92%;
+    --secondary-foreground: 354 40% 30%;
 
-    --muted: 330 20% 95%;
-    --muted-foreground: 330 10% 45%;
+    --muted: 35 30% 92%;
+    --muted-foreground: 340 10% 48%;
 
-    --accent: 330 100% 96%;
-    --accent-foreground: 330 65% 45%;
+    /* Pêssego #E7A48C */
+    --accent: 17 63% 73%;
+    --accent-foreground: 17 50% 25%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 100%;
@@ -32,20 +36,20 @@
     --warning-foreground: 30 90% 15%;
     --warning-bg: 30 90% 95%;
 
-    --border: 330 20% 90%;
-    --input: 330 20% 90%;
-    --ring: 330 65% 60%;
+    --border: 340 20% 88%;
+    --input: 340 20% 88%;
+    --ring: 354 54% 50%;
 
-    --radius: 1rem;
+    --radius: 0.875rem;
 
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 330 65% 60%;
+    --sidebar-background: 35 67% 95%;
+    --sidebar-foreground: 340 30% 18%;
+    --sidebar-primary: 354 54% 50%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 330 100% 96%;
-    --sidebar-accent-foreground: 330 65% 45%;
-    --sidebar-border: 330 20% 90%;
-    --sidebar-ring: 330 65% 60%;
+    --sidebar-accent: 340 83% 92%;
+    --sidebar-accent-foreground: 354 40% 30%;
+    --sidebar-border: 340 20% 88%;
+    --sidebar-ring: 354 54% 50%;
   }
 }
 
@@ -56,5 +60,6 @@
 
   body {
     @apply bg-background text-foreground;
+    font-family: 'Quicksand', 'Inter', sans-serif;
   }
 }

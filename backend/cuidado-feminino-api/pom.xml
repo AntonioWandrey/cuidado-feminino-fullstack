@@ -6,7 +6,7 @@
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
 		<version>4.0.4</version>
-		<relativePath/> <!-- lookup parent from repository -->
+		<relativePath/> 
 	</parent>
 	<groupId>br.com.unifebe.saude</groupId>
 	<artifactId>cuidado-feminino-api</artifactId>
@@ -28,8 +28,15 @@
 	</scm>
 	<properties>
 		<java.version>21</java.version>
+		<maven.compiler.release>21</maven.compiler.release>
 	</properties>
 	<dependencies>
+
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-actuator</artifactId>
+		</dependency>
+
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-data-jpa</artifactId>
@@ -65,17 +72,7 @@
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-data-jpa-test</artifactId>
-			<scope>test</scope>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-validation-test</artifactId>
-			<scope>test</scope>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-webmvc-test</artifactId>
+			<artifactId>spring-boot-starter-test</artifactId>
 			<scope>test</scope>
 		</dependency>
 	</dependencies>

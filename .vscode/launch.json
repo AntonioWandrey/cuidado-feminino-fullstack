@@ -1,0 +1,14 @@
+{
+  "configurations": [
+    {
+      "type": "java",
+      "name": "Spring Boot-CuidadoFemininoApiApplication<cuidado-feminino-api>",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "mainClass": "Cuidado.Feminino.API.CuidadoFemininoApiApplication",
+      "projectName": "cuidado-feminino-api",
+      "args": "",
+      "envFile": "${workspaceFolder}/.env"
+    }
+  ]
+}
