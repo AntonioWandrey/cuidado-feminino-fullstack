@@ -15,10 +15,7 @@ const tabs = [
 
 const BottomNav = ({ activeTab, onTabChange }: BottomNavProps) => {
   return (
-    <nav
-      className="fixed bottom-0 left-0 right-0 z-50 border-t"
-      style={{ backgroundColor: "#fff", borderColor: "#FBD9E5" }}
-    >
+    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t bg-white border-[#FBD9E5]">
       <div className="flex justify-around items-center h-16 max-w-lg mx-auto">
         {tabs.map((tab) => {
           const Icon = tab.icon;
@@ -28,9 +25,9 @@ const BottomNav = ({ activeTab, onTabChange }: BottomNavProps) => {
               key={tab.id}
               onClick={() => onTabChange(tab.id)}
               className={cn(
-                "flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all duration-200"
+                "flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all duration-200",
+                isActive ? "text-[#C43A4A]" : "text-gray-400"
               )}
-              style={{ color: isActive ? "#C43A4A" : "#9ca3af" }}
             >
               <Icon size={22} strokeWidth={isActive ? 2.5 : 1.8} />
               <span

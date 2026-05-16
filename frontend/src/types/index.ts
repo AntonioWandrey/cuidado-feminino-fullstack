@@ -101,6 +101,56 @@ export interface SerieConteudo {
   criadoEm: string;
 }
 
+// ─── Registro de Queixas ─────────────────────────────────────────────────────
+export type TipoQueixa =
+  | "CORRIMENTO"
+  | "COLICA"
+  | "SANGRAMENTO_FORA_PERIODO"
+  | "DOR_URINAR"
+  | "DOR_PELVICA"
+  | "ALTERACAO_HUMOR"
+  | "FOGACHO"
+  | "OUTRO";
+
+export type Intensidade = "LEVE" | "MODERADA" | "INTENSA";
+export type VolumeSangramento = "LEVE" | "MODERADO" | "INTENSO";
+
+export interface RegistroQueixaRequest {
+  dataRegistro: string;
+  tipoQueixa: TipoQueixa;
+  intensidade?: Intensidade;
+  descricao?: string;
+  duracaoHoras?: number;
+  corrimentoCor?: string;
+  corrimentoOdor?: boolean;
+  corrimentoCoceira?: boolean;
+  sangramentoVolume?: VolumeSangramento;
+  conteudoRelacionadoId?: number;
+}
+
+export interface RegistroQueixaResponse {
+  id: number;
+  dataRegistro: string;
+  tipoQueixa: TipoQueixa;
+  intensidade: Intensidade | null;
+  descricao: string | null;
+  duracaoHoras: number | null;
+  corrimentoCor: string | null;
+  corrimentoOdor: boolean | null;
+  corrimentoCoceira: boolean | null;
+  sangramentoVolume: VolumeSangramento | null;
+  conteudoRelacionadoId: number | null;
+  conteudoRelacionadoTitulo: string | null;
+  criadoEm: string;
+  atualizadoEm: string | null;
+}
+
+export interface ResumoQueixasResponse {
+  totalQueixas: number;
+  contagemPorTipo: Record<TipoQueixa, number>;
+  queixaMaisFrequente: TipoQueixa | null;
+}
+
 // ─── Lembretes ───────────────────────────────────────────────────────────────
 export interface Appointment {
   id: string;

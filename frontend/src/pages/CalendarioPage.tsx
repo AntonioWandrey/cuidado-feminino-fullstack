@@ -10,6 +10,8 @@ import {
   isAfter,
   isWithinInterval,
   startOfDay,
+  startOfMonth,
+  endOfMonth,
 } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
@@ -29,8 +31,10 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { getPrevisao, getCiclos, registrarCiclo } from "@/services/cicloService";
-import type { PrevisaoResponse } from "@/types";
+import { getQueixasPorPeriodo } from "@/services/queixaService";
+import type { PrevisaoResponse, RegistroQueixaResponse } from "@/types";
 import { cn } from "@/lib/utils";
+import RegistroQueixaModal, { tipoQueixaConfig } from "@/components/RegistroQueixaModal";
 
 // ─── tipos ────────────────────────────────────────────────────────────────────
 type LembreteTipo = "consulta" | "vacina" | "exame" | "anticoncepcional";
@@ -76,9 +80,11 @@ const getFase = (date: Date, previsao: PrevisaoResponse): Fase => {
 const buildModifiers = (
   previsao: PrevisaoResponse | undefined,
   ciclosDays: Date[],
-  lembreteDays: Date[]
+  lembreteDays: Date[],
+  queixaDays: Date[]
 ) => {
-  if (!previsao) return { cicloReal: ciclosDays, lembrete: lembreteDays };
+  if (!previsao)
+    return { cicloReal: ciclosDays, lembrete: lembreteDays, queixa: queixaDays };
 
   const menStart = parseISO(previsao.proximaMenstruacao);
   const menEnd = addDays(menStart, 4);
@@ -95,6 +101,7 @@ const buildModifiers = (
     lutea: safeInterval(luteaStart, luteaEnd),
     cicloReal: ciclosDays,
     lembrete: lembreteDays,
+    queixa: queixaDays,
   };
 };
 
@@ -102,10 +109,10 @@ const lembreteTipoConfig: Record<
   LembreteTipo,
   { icon: React.ElementType; label: string; cor: string }
 > = {
-  consulta: { icon: Stethoscope, label: "Consulta", cor: "#4A90C4" },
-  vacina: { icon: Syringe, label: "Vacina", cor: "#C43A4A" },
-  exame: { icon: FlaskConical, label: "Exame", cor: "#E8B84A" },
-  anticoncepcional: { icon: Clock, label: "Anticoncepcional", cor: "#C56682" },
+  consulta:         { icon: Stethoscope, label: "Consulta",         cor: "#4A90C4" },
+  vacina:           { icon: Syringe,     label: "Vacina",           cor: "#C43A4A" },
+  exame:            { icon: FlaskConical,label: "Exame",            cor: "#E8B84A" },
+  anticoncepcional: { icon: Clock,       label: "Anticoncepcional", cor: "#C56682" },
 };
 
 const legend = [
@@ -114,6 +121,7 @@ const legend = [
   { cor: "#E8B84A", label: "Ovulação" },
   { cor: "#FBD9E5", textCor: "#C56682", label: "Fase lútea" },
   { cor: "#8b1a2a", label: "Período real registrado" },
+  { cor: "#E7A48C", label: "Queixa registrada" },
 ];
 
 // ─── component ────────────────────────────────────────────────────────────────
@@ -121,8 +129,10 @@ const CalendarioPage = () => {
   const queryClient = useQueryClient();
 
   const [selectedDay, setSelectedDay] = useState<Date | undefined>(new Date());
+  const [mesAtual, setMesAtual] = useState<Date>(new Date());
   const [mostrarLegenda, setMostrarLegenda] = useState(false);
   const [mostrarFormLembrete, setMostrarFormLembrete] = useState(false);
+  const [mostrarModalQueixa, setMostrarModalQueixa] = useState(false);
   const [lembretes, setLembretes] = useState<Lembrete[]>([]);
   const [novoLembrete, setNovoLembrete] = useState<{
     titulo: string;
@@ -138,6 +148,17 @@ const CalendarioPage = () => {
   const { data: ciclos } = useQuery({
     queryKey: ["ciclos"],
     queryFn: getCiclos,
+    retry: 1,
+  });
+
+  const periodoMes = useMemo(() => ({
+    inicio: format(startOfMonth(mesAtual), "yyyy-MM-dd"),
+    fim: format(endOfMonth(mesAtual), "yyyy-MM-dd"),
+  }), [mesAtual]);
+
+  const { data: queixas = [] } = useQuery<RegistroQueixaResponse[]>({
+    queryKey: ["queixas", periodoMes.inicio, periodoMes.fim],
+    queryFn: () => getQueixasPorPeriodo(periodoMes.inicio, periodoMes.fim),
     retry: 1,
   });
 
@@ -172,11 +193,17 @@ const CalendarioPage = () => {
     [lembretes]
   );
 
-  const modifiers = useMemo(
-    () => buildModifiers(previsao, ciclosDays, lembreteDays),
-    [previsao, ciclosDays, lembreteDays]
+  const queixaDays = useMemo(
+    () => queixas.map((q) => parseISO(q.dataRegistro)),
+    [queixas]
   );
 
+  const modifiers = useMemo(
+    () => buildModifiers(previsao, ciclosDays, lembreteDays, queixaDays),
+    [previsao, ciclosDays, lembreteDays, queixaDays]
+  );
+
+  // modifiersStyles é um objeto de config passado ao componente Calendar — não é inline style JSX
   const modifiersStyles = {
     menstruacao: {
       backgroundColor: "#C43A4A",
@@ -207,6 +234,11 @@ const CalendarioPage = () => {
       borderRadius: "50%",
       fontWeight: "700",
     },
+    queixa: {
+      outline: "2.5px solid #E7A48C",
+      outlineOffset: "1px",
+      borderRadius: "50%",
+    },
   };
 
   // ─── seleção ────────────────────────────────────────────────────────────────
@@ -220,6 +252,13 @@ const CalendarioPage = () => {
     const dayStr = format(selectedDay, "yyyy-MM-dd");
     return lembretes.filter((l) => l.data === dayStr);
   }, [selectedDay, lembretes]);
+
+  const queixasDodia = useMemo<RegistroQueixaResponse[]>(() => {
+    if (!selectedDay) return [];
+    return queixas.filter((q) =>
+      isSameDay(parseISO(q.dataRegistro), selectedDay)
+    );
+  }, [selectedDay, queixas]);
 
   const ehPassadoOuHoje =
     selectedDay && !isAfter(startOfDay(selectedDay), startOfDay(new Date()));
@@ -253,22 +292,17 @@ const CalendarioPage = () => {
     <div className="space-y-4">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold" style={{ color: "#3d2529" }}>
-          Calendário do Ciclo
-        </h1>
-        <p className="text-sm mt-0.5" style={{ color: "#C56682" }}>
+        <h1 className="text-2xl font-bold text-[#3d2529]">Calendário do Ciclo</h1>
+        <p className="text-sm mt-0.5 text-[#C56682]">
           Toque em um dia para ver detalhes ou registrar eventos
         </p>
       </div>
 
       {/* Aviso sem dados */}
       {!isLoading && previsao?.ciclosAnalisados === 0 && (
-        <div
-          className="rounded-2xl p-3 flex gap-3 items-start"
-          style={{ backgroundColor: "#FBD9E5" }}
-        >
-          <Info size={16} style={{ color: "#C43A4A", flexShrink: 0, marginTop: 2 }} />
-          <p className="text-xs leading-relaxed" style={{ color: "#3d2529" }}>
+        <div className="rounded-2xl p-3 flex gap-3 items-start bg-[#FBD9E5]">
+          <Info size={16} className="text-[#C43A4A] flex-shrink-0 mt-0.5" />
+          <p className="text-xs leading-relaxed text-[#3d2529]">
             Sem ciclos registrados. As fases mostradas usam o padrão de 28 dias.
             Registre seu período para previsões personalizadas.
           </p>
@@ -276,10 +310,7 @@ const CalendarioPage = () => {
       )}
 
       {/* Calendário */}
-      <div
-        className="rounded-2xl shadow-sm"
-        style={{ backgroundColor: "#fff", border: "1px solid #FBD9E5" }}
-      >
+      <div className="rounded-2xl shadow-sm bg-white border border-[#FBD9E5]">
         <Calendar
           mode="single"
           selected={selectedDay}
@@ -287,6 +318,7 @@ const CalendarioPage = () => {
             setSelectedDay(day);
             setMostrarFormLembrete(false);
           }}
+          onMonthChange={setMesAtual}
           locale={ptBR}
           modifiers={modifiers}
           modifiersStyles={modifiersStyles}
@@ -304,11 +336,8 @@ const CalendarioPage = () => {
 
       {/* Painel do dia selecionado */}
       {selectedDay && (
-        <div
-          className="rounded-2xl overflow-hidden shadow-sm"
-          style={{ border: "1px solid #FBD9E5" }}
-        >
-          {/* Cabeçalho do dia */}
+        <div className="rounded-2xl overflow-hidden shadow-sm border border-[#FBD9E5]">
+          {/* Cabeçalho do dia — cor dinâmica vinda da fase */}
           <div
             className="px-4 py-3 flex items-center justify-between"
             style={{
@@ -327,59 +356,81 @@ const CalendarioPage = () => {
             <CalendarDays size={20} className="opacity-80" />
           </div>
 
-          <div className="p-4 space-y-3" style={{ backgroundColor: "#fff" }}>
+          <div className="p-4 space-y-3 bg-white">
             {/* Fase do dia */}
             {faseDodia ? (
-              <div
-                className="rounded-xl p-3 flex items-center gap-3"
-                style={{ backgroundColor: "#FBF4EB" }}
-              >
+              <div className="rounded-xl p-3 flex items-center gap-3 bg-[#FBF4EB]">
                 <div
                   className="w-3 h-3 rounded-full flex-shrink-0"
                   style={{ backgroundColor: faseDodia.cor }}
                 />
                 <div>
-                  <p className="text-xs font-bold" style={{ color: "#3d2529" }}>
-                    {faseDodia.label}
-                  </p>
-                  <p className="text-xs" style={{ color: "#9ca3af" }}>
-                    {faseDodia.nome === "menstruacao" &&
-                      "Período menstrual previsto"}
-                    {faseDodia.nome === "fertil" &&
-                      "Janela de maior fertilidade"}
-                    {faseDodia.nome === "ovulacao" &&
-                      "Pico de fertilidade — ovulação prevista"}
-                    {faseDodia.nome === "lutea" &&
-                      "Fase pré-menstrual — possível TPM"}
+                  <p className="text-xs font-bold text-[#3d2529]">{faseDodia.label}</p>
+                  <p className="text-xs text-gray-400">
+                    {faseDodia.nome === "menstruacao" && "Período menstrual previsto"}
+                    {faseDodia.nome === "fertil" && "Janela de maior fertilidade"}
+                    {faseDodia.nome === "ovulacao" && "Pico de fertilidade — ovulação prevista"}
+                    {faseDodia.nome === "lutea" && "Fase pré-menstrual — possível TPM"}
                   </p>
                 </div>
               </div>
             ) : (
-              <p className="text-xs text-center py-1" style={{ color: "#9ca3af" }}>
+              <p className="text-xs text-center py-1 text-gray-400">
                 Fora das fases previstas para este ciclo
               </p>
             )}
 
+            {/* Queixas do dia */}
+            {queixasDodia.length > 0 && (
+              <div className="rounded-xl p-3 bg-[#FBF4EB] space-y-2">
+                <p className="text-xs font-bold text-[#C56682]">Queixas registradas</p>
+                {queixasDodia.map((q) => {
+                  const cfg = tipoQueixaConfig[q.tipoQueixa];
+                  const Icon = cfg.icon;
+                  return (
+                    <div key={q.id} className="flex items-center gap-2">
+                      <div
+                        className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0"
+                        style={{ backgroundColor: cfg.cor + "22" }}
+                      >
+                        <Icon size={12} style={{ color: cfg.cor }} />
+                      </div>
+                      <span className="text-xs text-[#3d2529]">{cfg.label}</span>
+                      {q.intensidade && (
+                        <span className="text-[10px] text-gray-400">· {q.intensidade}</span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
             {/* Ações */}
             <div className="flex gap-2">
-              {/* Registrar período */}
               {ehPassadoOuHoje && (
                 <button
                   onClick={handleRegistrarPeriodo}
                   disabled={registrando}
-                  className="flex-1 flex items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-semibold transition-opacity active:opacity-70 disabled:opacity-50"
-                  style={{ backgroundColor: "#C43A4A", color: "#fff" }}
+                  className="flex-1 flex items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-semibold transition-opacity active:opacity-70 disabled:opacity-50 bg-[#C43A4A] text-white"
                 >
                   <Droplets size={14} />
                   {registrando ? "Registrando..." : "Registrar período"}
                 </button>
               )}
 
-              {/* Adicionar lembrete */}
+              {ehPassadoOuHoje && (
+                <button
+                  onClick={() => setMostrarModalQueixa(true)}
+                  className="flex-1 flex items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-semibold transition-opacity active:opacity-70 bg-[#E7A48C] text-white"
+                >
+                  <Plus size={14} />
+                  Queixa
+                </button>
+              )}
+
               <button
                 onClick={() => setMostrarFormLembrete((v) => !v)}
-                className="flex-1 flex items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-semibold transition-opacity active:opacity-70"
-                style={{ backgroundColor: "#FBD9E5", color: "#C43A4A" }}
+                className="flex-1 flex items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-semibold transition-opacity active:opacity-70 bg-[#FBD9E5] text-[#C43A4A]"
               >
                 <Plus size={14} />
                 Lembrete
@@ -388,16 +439,13 @@ const CalendarioPage = () => {
 
             {/* Formulário de lembrete */}
             {mostrarFormLembrete && (
-              <div
-                className="rounded-xl p-3 space-y-3"
-                style={{ backgroundColor: "#FBF4EB", border: "1px solid #FBD9E5" }}
-              >
-                <p className="text-xs font-bold" style={{ color: "#3d2529" }}>
+              <div className="rounded-xl p-3 space-y-3 bg-[#FBF4EB] border border-[#FBD9E5]">
+                <p className="text-xs font-bold text-[#3d2529]">
                   Novo lembrete para{" "}
                   {format(selectedDay, "dd/MM", { locale: ptBR })}
                 </p>
 
-                {/* Tipo */}
+                {/* Tipo — cores dinâmicas vindas do cfg.cor */}
                 <div className="grid grid-cols-2 gap-2">
                   {(
                     Object.entries(lembreteTipoConfig) as [
@@ -409,9 +457,7 @@ const CalendarioPage = () => {
                     return (
                       <button
                         key={tipo}
-                        onClick={() =>
-                          setNovoLembrete((n) => ({ ...n, tipo }))
-                        }
+                        onClick={() => setNovoLembrete((n) => ({ ...n, tipo }))}
                         className="flex items-center gap-2 rounded-xl p-2 text-xs font-medium transition-all"
                         style={{
                           backgroundColor:
@@ -428,7 +474,6 @@ const CalendarioPage = () => {
                   })}
                 </div>
 
-                {/* Título */}
                 <input
                   type="text"
                   placeholder="Descrição (ex: Consulta Dr. Ana)"
@@ -436,12 +481,7 @@ const CalendarioPage = () => {
                   onChange={(e) =>
                     setNovoLembrete((n) => ({ ...n, titulo: e.target.value }))
                   }
-                  className="w-full rounded-xl px-3 py-2 text-xs outline-none"
-                  style={{
-                    backgroundColor: "#fff",
-                    border: "1px solid #FBD9E5",
-                    color: "#3d2529",
-                  }}
+                  className="w-full rounded-xl px-3 py-2 text-xs outline-none bg-white border border-[#FBD9E5] text-[#3d2529]"
                   onKeyDown={(e) => e.key === "Enter" && handleAddLembrete()}
                 />
 
@@ -449,8 +489,7 @@ const CalendarioPage = () => {
                   <button
                     onClick={handleAddLembrete}
                     disabled={!novoLembrete.titulo.trim()}
-                    className="flex-1 rounded-xl py-2 text-xs font-bold disabled:opacity-40"
-                    style={{ backgroundColor: "#C43A4A", color: "#fff" }}
+                    className="flex-1 rounded-xl py-2 text-xs font-bold disabled:opacity-40 bg-[#C43A4A] text-white"
                   >
                     Salvar
                   </button>
@@ -459,8 +498,7 @@ const CalendarioPage = () => {
                       setMostrarFormLembrete(false);
                       setNovoLembrete({ titulo: "", tipo: "consulta" });
                     }}
-                    className="px-3 rounded-xl text-xs"
-                    style={{ backgroundColor: "#FBD9E5", color: "#C43A4A" }}
+                    className="px-3 rounded-xl text-xs bg-[#FBD9E5] text-[#C43A4A]"
                   >
                     <X size={14} />
                   </button>
@@ -471,17 +509,14 @@ const CalendarioPage = () => {
             {/* Lembretes do dia */}
             {lembretesDodia.length > 0 && (
               <div className="space-y-2">
-                <p className="text-xs font-bold" style={{ color: "#C56682" }}>
-                  Lembretes
-                </p>
+                <p className="text-xs font-bold text-[#C56682]">Lembretes</p>
                 {lembretesDodia.map((l) => {
                   const cfg = lembreteTipoConfig[l.tipo];
                   const Icon = cfg.icon;
                   return (
                     <div
                       key={l.id}
-                      className="flex items-center gap-2 rounded-xl p-2.5"
-                      style={{ backgroundColor: "#FBF4EB" }}
+                      className="flex items-center gap-2 rounded-xl p-2.5 bg-[#FBF4EB]"
                     >
                       <div
                         className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
@@ -490,21 +525,16 @@ const CalendarioPage = () => {
                         <Icon size={14} style={{ color: cfg.cor }} />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p
-                          className="text-xs font-medium truncate"
-                          style={{ color: "#3d2529" }}
-                        >
+                        <p className="text-xs font-medium truncate text-[#3d2529]">
                           {l.titulo}
                         </p>
-                        <p className="text-[10px]" style={{ color: "#9ca3af" }}>
-                          {cfg.label}
-                        </p>
+                        <p className="text-[10px] text-gray-400">{cfg.label}</p>
                       </div>
                       <button
                         onClick={() => handleRemoverLembrete(l.id)}
                         className="p-1"
                       >
-                        <Trash2 size={13} style={{ color: "#C43A4A" }} />
+                        <Trash2 size={13} className="text-[#C43A4A]" />
                       </button>
                     </div>
                   );
@@ -517,13 +547,10 @@ const CalendarioPage = () => {
 
       {/* Ciclos registrados */}
       {ciclos && ciclos.length > 0 && (
-        <div
-          className="rounded-2xl p-4 shadow-sm"
-          style={{ backgroundColor: "#fff", border: "1px solid #FBD9E5" }}
-        >
+        <div className="rounded-2xl p-4 shadow-sm bg-white border border-[#FBD9E5]">
           <div className="flex items-center gap-2 mb-3">
-            <CalendarCheck size={16} style={{ color: "#C43A4A" }} />
-            <p className="text-sm font-bold" style={{ color: "#3d2529" }}>
+            <CalendarCheck size={16} className="text-[#C43A4A]" />
+            <p className="text-sm font-bold text-[#3d2529]">
               Últimos Ciclos Registrados
             </p>
           </div>
@@ -533,18 +560,18 @@ const CalendarioPage = () => {
                 key={c.id}
                 className="flex justify-between items-center text-xs"
               >
-                <span style={{ color: "#6b5a5e" }}>
+                <span className="text-[#6b5a5e]">
                   {format(parseISO(c.dataInicio), "dd/MM/yyyy")}
                   {c.dataFim
                     ? ` → ${format(parseISO(c.dataFim), "dd/MM/yyyy")}`
                     : " (em andamento)"}
                 </span>
                 <span
-                  className="px-2 py-0.5 rounded-full text-[10px] font-medium"
-                  style={{
-                    backgroundColor: c.aberto ? "#FBD9E5" : "#f0fdf4",
-                    color: c.aberto ? "#C43A4A" : "#16a34a",
-                  }}
+                  className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
+                    c.aberto
+                      ? "bg-[#FBD9E5] text-[#C43A4A]"
+                      : "bg-[#f0fdf4] text-green-600"
+                  }`}
                 >
                   {c.aberto ? "Aberto" : `${c.duracaoDias ?? "?"} dias`}
                 </span>
@@ -552,7 +579,7 @@ const CalendarioPage = () => {
             ))}
           </div>
           {temCicloAberto && (
-            <p className="text-xs mt-3 p-2 rounded-xl text-center" style={{ backgroundColor: "#FBD9E5", color: "#C43A4A" }}>
+            <p className="text-xs mt-3 p-2 rounded-xl text-center bg-[#FBD9E5] text-[#C43A4A]">
               ⚠️ Há um ciclo em aberto. Encerre-o antes de registrar um novo.
             </p>
           )}
@@ -561,33 +588,18 @@ const CalendarioPage = () => {
 
       {/* Previsão */}
       {previsao && (
-        <div
-          className="rounded-2xl p-4 shadow-sm"
-          style={{ backgroundColor: "#fff", border: "1px solid #FBD9E5" }}
-        >
+        <div className="rounded-2xl p-4 shadow-sm bg-white border border-[#FBD9E5]">
           <div className="flex items-center gap-2 mb-3">
-            <Droplets size={16} style={{ color: "#C43A4A" }} />
-            <p className="text-sm font-bold" style={{ color: "#3d2529" }}>
+            <Droplets size={16} className="text-[#C43A4A]" />
+            <p className="text-sm font-bold text-[#3d2529]">
               Próximas Datas Previstas
             </p>
           </div>
           <div className="space-y-2.5">
             {[
-              {
-                label: "Próxima menstruação",
-                value: previsao.proximaMenstruacao,
-                cor: "#C43A4A",
-              },
-              {
-                label: "Início período fértil",
-                value: previsao.inicioPeriodoFertil,
-                cor: "#4A90C4",
-              },
-              {
-                label: "Ovulação prevista",
-                value: previsao.dataOvulacao,
-                cor: "#E8B84A",
-              },
+              { label: "Próxima menstruação",  value: previsao.proximaMenstruacao,  cor: "#C43A4A" },
+              { label: "Início período fértil", value: previsao.inicioPeriodoFertil, cor: "#4A90C4" },
+              { label: "Ovulação prevista",     value: previsao.dataOvulacao,        cor: "#E8B84A" },
             ].map(({ label, value, cor }) => (
               <div key={label} className="flex justify-between items-center">
                 <div className="flex items-center gap-2">
@@ -595,9 +607,7 @@ const CalendarioPage = () => {
                     className="w-2.5 h-2.5 rounded-full flex-shrink-0"
                     style={{ backgroundColor: cor }}
                   />
-                  <span className="text-xs" style={{ color: "#6b5a5e" }}>
-                    {label}
-                  </span>
+                  <span className="text-xs text-[#6b5a5e]">{label}</span>
                 </div>
                 <span className="text-xs font-bold" style={{ color: cor }}>
                   {format(parseISO(value), "dd/MM/yyyy")}
@@ -605,10 +615,7 @@ const CalendarioPage = () => {
               </div>
             ))}
           </div>
-          <p
-            className="text-[10px] mt-3 pt-2 border-t"
-            style={{ borderColor: "#FBD9E5", color: "#9ca3af" }}
-          >
+          <p className="text-[10px] mt-3 pt-2 border-t border-[#FBD9E5] text-gray-400">
             Confiança:{" "}
             {previsao.confianca === "ALTA"
               ? "Alta ✓"
@@ -621,51 +628,45 @@ const CalendarioPage = () => {
       )}
 
       {/* Legenda (colapsável) */}
-      <div
-        className="rounded-2xl shadow-sm overflow-hidden"
-        style={{ border: "1px solid #FBD9E5" }}
-      >
+      <div className="rounded-2xl shadow-sm overflow-hidden border border-[#FBD9E5]">
         <button
           onClick={() => setMostrarLegenda((v) => !v)}
-          className="w-full flex items-center justify-between px-4 py-3"
-          style={{ backgroundColor: "#fff" }}
+          className="w-full flex items-center justify-between px-4 py-3 bg-white"
         >
-          <p className="text-xs font-bold" style={{ color: "#3d2529" }}>
-            Legenda das Fases
-          </p>
+          <p className="text-xs font-bold text-[#3d2529]">Legenda das Fases</p>
           {mostrarLegenda ? (
-            <ChevronUp size={16} style={{ color: "#C56682" }} />
+            <ChevronUp size={16} className="text-[#C56682]" />
           ) : (
-            <ChevronDown size={16} style={{ color: "#C56682" }} />
+            <ChevronDown size={16} className="text-[#C56682]" />
           )}
         </button>
         {mostrarLegenda && (
-          <div
-            className="px-4 pb-4 grid grid-cols-2 gap-2"
-            style={{ backgroundColor: "#fff" }}
-          >
+          <div className="px-4 pb-4 grid grid-cols-2 gap-2 bg-white">
             {legend.map(({ cor, textCor, label }) => (
               <div key={label} className="flex items-center gap-2">
                 <div
                   className="w-5 h-5 rounded-full flex-shrink-0 border"
-                  style={{
-                    backgroundColor: cor,
-                    borderColor: textCor ?? cor,
-                  }}
+                  style={{ backgroundColor: cor, borderColor: textCor ?? cor }}
                 />
-                <span className="text-xs" style={{ color: "#6b5a5e" }}>
-                  {label}
-                </span>
+                <span className="text-xs text-[#6b5a5e]">{label}</span>
               </div>
             ))}
           </div>
         )}
       </div>
 
-      {/* Aviso legal */}
-      <p className="text-center text-xs py-2" style={{ color: "#9ca3af" }}>
+      <p className="text-center text-xs py-2 text-gray-400">
         ⚠️ Previsões são estimativas. Consulte sempre a UBS.
       </p>
+
+      {/* Modal de queixa */}
+      {mostrarModalQueixa && selectedDay && (
+        <RegistroQueixaModal
+          dia={selectedDay}
+          queixasDodia={queixasDodia}
+          onClose={() => setMostrarModalQueixa(false)}
+        />
+      )}
     </div>
   );
 };

@@ -45,12 +45,11 @@ public class GlobalExceptionHandler {
                 .body(new ErroResponse(HttpStatus.NOT_FOUND.value(), ex.getMessage()));
     }
 
-    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
-    public ResponseEntity<ErroResponse> handleTipoInvalido(MethodArgumentTypeMismatchException ex) {
-        String mensagem = "Valor inválido para o parâmetro '" + ex.getName() + "': " + ex.getValue();
-        log.warn("Tipo inválido: {}", mensagem);
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(new ErroResponse(HttpStatus.BAD_REQUEST.value(), mensagem));
+    @ExceptionHandler(QueixaNaoEncontradaException.class)
+    public ResponseEntity<ErroResponse> handleQueixaNaoEncontrada(QueixaNaoEncontradaException ex) {
+        log.warn("Queixa não encontrada: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(new ErroResponse(HttpStatus.NOT_FOUND.value(), ex.getMessage()));
     }
 
     @ExceptionHandler(CicloEmAbertoException.class)

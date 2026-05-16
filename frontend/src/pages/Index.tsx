@@ -27,7 +27,7 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: "#FBF4EB" }}>
+    <div className="min-h-screen bg-[#FBF4EB]">
       <div className="max-w-lg mx-auto px-4 pt-6 pb-24">
         {renderPage()}
       </div>
