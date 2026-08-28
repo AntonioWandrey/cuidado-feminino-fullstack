@@ -9,5 +9,7 @@ public interface SerieConteudoItemRepository extends JpaRepository<SerieConteudo
 
     List<SerieConteudoItem> findBySerieIdOrderByOrdemAsc(Long serieId);
 
+    List<SerieConteudoItem> findBySerieIdAndConteudoAtivoTrueOrderByOrdemAsc(Long serieId);
+
     boolean existsBySerieIdAndConteudoId(Long serieId, Long conteudoId);
 }

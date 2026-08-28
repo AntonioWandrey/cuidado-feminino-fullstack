@@ -16,6 +16,7 @@ import { ptBR } from "date-fns/locale";
 import SymptomForm from "@/components/SymptomForm";
 import { getPrevisao, getCiclos } from "@/services/cicloService";
 import { getDestaques } from "@/services/conteudoService";
+import { isSafeImageUrl } from "@/lib/richText";
 import { useNavigate } from "react-router-dom";
 
 interface HomePageProps {
@@ -73,7 +74,11 @@ const HomePage = ({ onNavigate }: HomePageProps) => {
   const { data: destaques } = useQuery({
     queryKey: ["destaques"],
     queryFn: getDestaques,
-    retry: 1,
+    retry: false,
+    staleTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
+    refetchInterval: 5_000,
   });
 
   useEffect(() => {
@@ -95,6 +100,9 @@ const HomePage = ({ onNavigate }: HomePageProps) => {
 
   const ultimoCiclo = ciclos?.[0];
   const dica = dicas[dicaIdx];
+  const destaqueAtual = destaques?.length
+    ? destaques[destaqueIdx % destaques.length]
+    : null;
 
   return (
     <div className="space-y-5">
@@ -204,7 +212,7 @@ const HomePage = ({ onNavigate }: HomePageProps) => {
       </button>
 
       {/* Conteúdo em Destaque */}
-      {destaques && destaques.length > 0 && (
+      {destaqueAtual && destaques && (
         <div>
           <div className="flex items-center justify-between mb-3">
             <h2 className="font-bold text-sm text-[#3d2529]">✨ Conteúdo em Destaque</h2>
@@ -217,26 +225,34 @@ const HomePage = ({ onNavigate }: HomePageProps) => {
           </div>
 
           <button
-            onClick={() => navigate(`/conteudos/${destaques[destaqueIdx].id}`)}
+            onClick={() => navigate(`/conteudos/${destaqueAtual.id}`)}
             className="w-full text-left rounded-2xl p-4 shadow-sm bg-white border border-[#FBD9E5]"
           >
+            {destaqueAtual.imagemCapaUrl && isSafeImageUrl(destaqueAtual.imagemCapaUrl) && (
+              <img
+                src={destaqueAtual.imagemCapaUrl}
+                alt={`Capa do artigo ${destaqueAtual.titulo}`}
+                loading="lazy"
+                className="mb-3 aspect-video w-full rounded-xl object-cover"
+              />
+            )}
             <div className="flex items-center gap-2 mb-2">
               <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-[#FBD9E5] text-[#C43A4A]">
-                {destaques[destaqueIdx].categoriaNome}
+                {destaqueAtual.categoriaNome}
               </span>
-              {destaques[destaqueIdx].tempoLeituraMin && (
+              {destaqueAtual.tempoLeituraMin && (
                 <span className="text-xs flex items-center gap-1 text-gray-400">
                   <Clock size={11} />
-                  {destaques[destaqueIdx].tempoLeituraMin} min
+                  {destaqueAtual.tempoLeituraMin} min
                 </span>
               )}
             </div>
             <p className="font-bold text-sm mb-1 text-[#3d2529]">
-              {destaques[destaqueIdx].titulo}
+              {destaqueAtual.titulo}
             </p>
-            {destaques[destaqueIdx].subtitulo && (
+            {destaqueAtual.subtitulo && (
               <p className="text-xs line-clamp-2 text-[#6b5a5e]">
-                {destaques[destaqueIdx].subtitulo}
+                {destaqueAtual.subtitulo}
               </p>
             )}
             <p className="text-xs mt-2 font-semibold text-[#C43A4A]">Ler mais →</p>

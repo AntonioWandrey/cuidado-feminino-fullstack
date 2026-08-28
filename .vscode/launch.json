@@ -2,13 +2,12 @@
   "configurations": [
     {
       "type": "java",
-      "name": "Spring Boot-CuidadoFemininoApiApplication<cuidado-feminino-api>",
+      "name": "Backend Spring Boot",
       "request": "launch",
-      "cwd": "${workspaceFolder}",
+      "cwd": "${workspaceFolder}/backend/cuidado-feminino-api",
       "mainClass": "Cuidado.Feminino.API.CuidadoFemininoApiApplication",
       "projectName": "cuidado-feminino-api",
-      "args": "",
-      "envFile": "${workspaceFolder}/.env"
+      "args": ""
     }
   ]
 }

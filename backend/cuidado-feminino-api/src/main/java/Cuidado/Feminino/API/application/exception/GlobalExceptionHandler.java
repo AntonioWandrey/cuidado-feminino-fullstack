@@ -3,6 +3,7 @@ package Cuidado.Feminino.API.application.exception;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -72,6 +73,21 @@ public class GlobalExceptionHandler {
                 .collect(Collectors.toMap(FieldError::getField, FieldError::getDefaultMessage));
         String mensagem = "Dados inválidos: " + erros;
         log.warn("Erro de validação: {}", mensagem);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ErroResponse(HttpStatus.BAD_REQUEST.value(), mensagem));
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErroResponse> handleJsonInvalido(HttpMessageNotReadableException ex) {
+        log.warn("Corpo JSON inválido");
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ErroResponse(HttpStatus.BAD_REQUEST.value(), "Corpo da requisição inválido"));
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ErroResponse> handleParametroInvalido(MethodArgumentTypeMismatchException ex) {
+        String mensagem = "Parâmetro inválido: " + ex.getName();
+        log.warn("{}", mensagem);
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(new ErroResponse(HttpStatus.BAD_REQUEST.value(), mensagem));
     }

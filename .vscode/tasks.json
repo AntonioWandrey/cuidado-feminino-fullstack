@@ -1,0 +1,49 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Frontend: instalar dependências",
+      "type": "shell",
+      "command": "npm ci",
+      "options": { "cwd": "${workspaceFolder}/frontend" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Frontend: iniciar",
+      "type": "shell",
+      "command": "npm run dev",
+      "options": { "cwd": "${workspaceFolder}/frontend" },
+      "isBackground": true,
+      "problemMatcher": []
+    },
+    {
+      "label": "Frontend: testar",
+      "type": "shell",
+      "command": "npm test",
+      "options": { "cwd": "${workspaceFolder}/frontend" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Frontend: build",
+      "type": "shell",
+      "command": "npm run build",
+      "options": { "cwd": "${workspaceFolder}/frontend" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Backend: testar",
+      "type": "shell",
+      "command": ".\\mvnw.cmd test",
+      "options": { "cwd": "${workspaceFolder}/backend/cuidado-feminino-api" },
+      "problemMatcher": ["$javac"]
+    },
+    {
+      "label": "Backend: iniciar",
+      "type": "shell",
+      "command": ".\\mvnw.cmd spring-boot:run",
+      "options": { "cwd": "${workspaceFolder}/backend/cuidado-feminino-api" },
+      "isBackground": true,
+      "problemMatcher": []
+    }
+  ]
+}

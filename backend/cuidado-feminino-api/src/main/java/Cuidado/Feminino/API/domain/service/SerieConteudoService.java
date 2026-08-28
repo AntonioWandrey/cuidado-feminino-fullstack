@@ -36,7 +36,7 @@ public class SerieConteudoService {
 
         log.debug("Buscando conteúdos da série id={}", serie.getId());
 
-        return itemRepository.findBySerieIdOrderByOrdemAsc(serieId)
+        return itemRepository.findBySerieIdAndConteudoAtivoTrueOrderByOrdemAsc(serieId)
                 .stream()
                 .map(item -> ConteudoEducativoResponse.de(item.getConteudo()))
                 .toList();

@@ -50,6 +50,121 @@
     --sidebar-accent-foreground: 354 40% 30%;
     --sidebar-border: 340 20% 88%;
     --sidebar-ring: 354 54% 50%;
+
+    --editorial-background: #FCF8F3;
+    --editorial-surface: #FFFFFF;
+    --editorial-text: #34282B;
+    --editorial-muted: #746469;
+    --editorial-primary: #8F344D;
+    --editorial-accent: #D78F79;
+    --editorial-soft: #F4E6E8;
+    --editorial-success: #287A5A;
+    --editorial-error: #B4233A;
+  }
+}
+
+@layer components {
+  .article-content {
+    color: var(--editorial-text);
+    font-size: 1rem;
+    line-height: 1.75;
+    overflow-wrap: anywhere;
+  }
+
+  .article-content > :first-child {
+    margin-top: 0;
+  }
+
+  .article-content > :last-child {
+    margin-bottom: 0;
+  }
+
+  .article-content h2 {
+    margin: 2rem 0 0.75rem;
+    font-size: clamp(1.5rem, 3vw, 2rem);
+    font-weight: 700;
+    line-height: 1.25;
+  }
+
+  .article-content h3 {
+    margin: 1.5rem 0 0.625rem;
+    font-size: clamp(1.25rem, 2.5vw, 1.5rem);
+    font-weight: 700;
+    line-height: 1.35;
+  }
+
+  .article-content p,
+  .article-content ul,
+  .article-content ol,
+  .article-content blockquote {
+    margin: 0.875rem 0;
+  }
+
+  .article-content ul,
+  .article-content ol {
+    padding-left: 1.5rem;
+  }
+
+  .article-content ul {
+    list-style: disc;
+  }
+
+  .article-content ol {
+    list-style: decimal;
+  }
+
+  .article-content li {
+    margin: 0.35rem 0;
+  }
+
+  .article-content blockquote {
+    border-left: 4px solid var(--editorial-accent);
+    background: var(--editorial-soft);
+    padding: 0.75rem 1rem;
+    color: var(--editorial-muted);
+  }
+
+  .article-content a {
+    color: var(--editorial-primary);
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+  }
+
+  .article-content a:focus-visible {
+    border-radius: 0.2rem;
+    outline: 3px solid var(--editorial-accent);
+    outline-offset: 3px;
+  }
+
+  .article-content img {
+    display: block;
+    width: auto;
+    max-width: 100%;
+    height: auto;
+    margin: 1.5rem auto;
+    border-radius: 0.75rem;
+  }
+
+  .article-content iframe {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    aspect-ratio: 16 / 9;
+    height: auto;
+    margin: 1.5rem 0;
+    border: 0;
+    border-radius: 0.75rem;
+  }
+
+  .article-content hr {
+    margin: 2rem 0;
+    border-color: #E7DEDA;
+  }
+
+  .article-content.ProseMirror:focus-visible {
+    outline: 3px solid var(--editorial-accent);
+    outline-offset: -3px;
   }
 }
 

@@ -1,2 +1,22 @@
 .claude/
-application.properties
+
+# IDE e sistema operacional
+.idea/
+**/.idea/
+.DS_Store
+Thumbs.db
+
+# Frontend
+**/node_modules/
+**/dist/
+*.tsbuildinfo
+
+# Backend
+**/target/
+**/application-local.properties
+**/application-dev.properties
+
+# Configuração local e segredos
+.env
+.env.*
+!.env.example

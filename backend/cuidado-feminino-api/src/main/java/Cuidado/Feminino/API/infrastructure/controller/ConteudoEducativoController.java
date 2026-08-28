@@ -32,7 +32,7 @@ public class ConteudoEducativoController {
 
     @GetMapping("/{id}")
     public ResponseEntity<ConteudoEducativoResponse> buscarPorId(@PathVariable Long id) {
-        return ResponseEntity.ok(conteudoService.buscarPorId(id));
+        return ResponseEntity.ok(conteudoService.buscarPublicoPorId(id));
     }
 
     @GetMapping("/busca")

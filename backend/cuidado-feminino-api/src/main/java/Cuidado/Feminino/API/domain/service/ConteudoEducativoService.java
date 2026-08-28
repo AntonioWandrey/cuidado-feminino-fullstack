@@ -15,6 +15,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.net.URI;
+import java.util.Locale;
 import java.util.List;
 
 @Service
@@ -24,6 +26,7 @@ public class ConteudoEducativoService {
 
     private final ConteudoEducativoRepository repository;
     private final CategoriaConteudoRepository categoriaRepository;
+    private final SanitizadorConteudoService sanitizadorConteudoService;
 
     @Transactional(readOnly = true)
     public List<ConteudoEducativoResponse> listarAtivos() {
@@ -44,6 +47,13 @@ public class ConteudoEducativoService {
     @Transactional(readOnly = true)
     public ConteudoEducativoResponse buscarPorId(Long id) {
         return ConteudoEducativoResponse.de(buscarEntidadePorId(id));
+    }
+
+    @Transactional(readOnly = true)
+    public ConteudoEducativoResponse buscarPublicoPorId(Long id) {
+        ConteudoEducativo conteudo = repository.findByIdAndAtivoTrue(id)
+                .orElseThrow(() -> new ConteudoEducativoNaoEncontradoException(id));
+        return ConteudoEducativoResponse.de(conteudo);
     }
 
     @Transactional(readOnly = true)
@@ -83,6 +93,8 @@ public class ConteudoEducativoService {
 
     @Transactional
     public ConteudoEducativoResponse criar(ConteudoEducativoRequest request) {
+        validarUrlsExternas(request);
+        String corpoSanitizado = sanitizadorConteudoService.sanitizar(request.corpo());
         CategoriaConteudo categoria = categoriaRepository.findById(request.categoriaId())
                 .orElseThrow(() -> new CategoriaConteudoNaoEncontradaException(request.categoriaId()));
 
@@ -90,7 +102,7 @@ public class ConteudoEducativoService {
                 .categoria(categoria)
                 .titulo(request.titulo())
                 .subtitulo(request.subtitulo())
-                .corpo(request.corpo())
+                .corpo(corpoSanitizado)
                 .palavrasChave(request.palavrasChave())
                 .tempoLeituraMin(request.tempoLeituraMin())
                 .fonteReferencia(request.fonteReferencia())
@@ -109,13 +121,15 @@ public class ConteudoEducativoService {
     public ConteudoEducativoResponse atualizar(Long id, ConteudoEducativoRequest request) {
         ConteudoEducativo conteudo = buscarEntidadePorId(id);
 
+        validarUrlsExternas(request);
         CategoriaConteudo categoria = categoriaRepository.findById(request.categoriaId())
                 .orElseThrow(() -> new CategoriaConteudoNaoEncontradaException(request.categoriaId()));
+        String corpoSanitizado = sanitizadorConteudoService.sanitizar(request.corpo());
 
         conteudo.setCategoria(categoria);
         conteudo.setTitulo(request.titulo());
         conteudo.setSubtitulo(request.subtitulo());
-        conteudo.setCorpo(request.corpo());
+        conteudo.setCorpo(corpoSanitizado);
         conteudo.setPalavrasChave(request.palavrasChave());
         conteudo.setTempoLeituraMin(request.tempoLeituraMin());
         conteudo.setFonteReferencia(request.fonteReferencia());
@@ -130,23 +144,67 @@ public class ConteudoEducativoService {
     }
 
     @Transactional
-    public ConteudoEducativoResponse toggleAtivo(Long id) {
+    public ConteudoEducativoResponse alterarPublicacao(Long id, boolean ativo) {
         ConteudoEducativo conteudo = buscarEntidadePorId(id);
-        conteudo.setAtivo(!conteudo.getAtivo());
+        conteudo.setAtivo(ativo);
         ConteudoEducativo salvo = repository.save(conteudo);
-        log.info("Conteúdo educativo {}: id={}", salvo.getAtivo() ? "ativado" : "desativado", id);
+        log.info("Publicação de conteúdo alterada: id={}, ativo={}", id, ativo);
         return ConteudoEducativoResponse.de(salvo);
     }
 
     @Transactional
-    public void deletar(Long id) {
+    public void excluirLogicamente(Long id) {
         ConteudoEducativo conteudo = buscarEntidadePorId(id);
-        repository.delete(conteudo);
-        log.info("Conteúdo educativo deletado: id={}", id);
+        conteudo.setAtivo(false);
+        repository.save(conteudo);
+        log.info("Conteúdo educativo excluído logicamente: id={}", id);
     }
 
     private ConteudoEducativo buscarEntidadePorId(Long id) {
         return repository.findById(id)
                 .orElseThrow(() -> new ConteudoEducativoNaoEncontradoException(id));
+    }
+
+    private void validarUrlsExternas(ConteudoEducativoRequest request) {
+        if (StringUtils.hasText(request.imagemCapaUrl())) {
+            URI uri = criarUriHttps(request.imagemCapaUrl(),
+                    "URL da imagem de capa deve ser HTTPS e não pode apontar para SVG");
+            String caminho = uri.getPath();
+            String caminhoNormalizado = caminho == null ? "" : caminho.toLowerCase(Locale.ROOT);
+            if (caminho == null
+                    || caminhoNormalizado.endsWith(".svg")
+                    || caminhoNormalizado.endsWith(".svgz")) {
+                throw new IllegalArgumentException(
+                        "URL da imagem de capa deve ser HTTPS e não pode apontar para SVG");
+            }
+        }
+
+        if (StringUtils.hasText(request.fonteReferencia())) {
+            validarFontesReferencia(request.fonteReferencia());
+        }
+    }
+
+    private void validarFontesReferencia(String fontes) {
+        String mensagemErro = "Fonte de referência deve ser uma URL HTTPS válida";
+        for (String fonte : fontes.split("\\|", -1)) {
+            if (!StringUtils.hasText(fonte)) {
+                throw new IllegalArgumentException(mensagemErro);
+            }
+            criarUriHttps(fonte.trim(), mensagemErro);
+        }
+    }
+
+    private URI criarUriHttps(String valor, String mensagemErro) {
+        try {
+            URI uri = URI.create(valor);
+            if (!"https".equalsIgnoreCase(uri.getScheme())
+                    || !StringUtils.hasText(uri.getHost())
+                    || uri.getUserInfo() != null) {
+                throw new IllegalArgumentException(mensagemErro);
+            }
+            return uri;
+        } catch (IllegalArgumentException ex) {
+            throw new IllegalArgumentException(mensagemErro);
+        }
     }
 }

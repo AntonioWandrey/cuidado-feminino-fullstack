@@ -79,6 +79,20 @@ export interface ConteudoEducativo {
   atualizadoEm: string | null;
 }
 
+export interface ConteudoEducativoRequest {
+  categoriaId: number;
+  titulo: string;
+  subtitulo: string | null;
+  corpo: string;
+  palavrasChave: string | null;
+  tempoLeituraMin: number | null;
+  fonteReferencia: string | null;
+  imagemCapaUrl: string | null;
+  ativo: boolean;
+  destaque: boolean;
+  perfilAlvo: PerfilAlvo;
+}
+
 // ─── Categoria ───────────────────────────────────────────────────────────────
 export interface CategoriaConteudo {
   id: number;

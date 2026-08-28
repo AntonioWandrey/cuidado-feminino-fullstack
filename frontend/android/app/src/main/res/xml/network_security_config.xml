@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Permite HTTP para o backend local durante desenvolvimento -->
+    <domain-config cleartextTrafficPermitted="true">
+        <!-- Emulador Android: 10.0.2.2 = localhost do computador host -->
+        <domain includeSubdomains="false">10.0.2.2</domain>
+        <!-- Redes locais (Wi-Fi da mesma rede) -->
+        <domain includeSubdomains="false">192.168.0.0</domain>
+        <domain includeSubdomains="false">192.168.1.0</domain>
+        <domain includeSubdomains="false">10.0.0.0</domain>
+        <domain includeSubdomains="false">localhost</domain>
+    </domain-config>
+</network-security-config>

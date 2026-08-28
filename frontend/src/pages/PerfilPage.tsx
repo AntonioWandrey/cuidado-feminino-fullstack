@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { getCiclos } from "@/services/cicloService";
 import { getPrevisao } from "@/services/cicloService";
+import { classificarRegularidade } from "@/lib/cicloMetrics";
 
 const MenuItem = ({
   icon: Icon,
@@ -49,16 +50,10 @@ const PerfilPage = () => {
 
   const ciclosRegistrados = ciclos?.length ?? 0;
   const mediaCiclo = previsao ? Math.round(previsao.mediaDuracaoCiclo) : null;
-  const confianca = previsao?.confianca;
-
-  const regularidade =
-    confianca === "ALTA"
-      ? "Regular"
-      : confianca === "MEDIA"
-      ? "Moderada"
-      : ciclosRegistrados === 0
-      ? "Sem dados"
-      : "Irregular";
+  const regularidade = classificarRegularidade(
+    ciclosRegistrados,
+    previsao?.desvioPadrao ?? null
+  );
 
   return (
     <div className="space-y-5">

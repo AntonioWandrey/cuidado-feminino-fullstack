@@ -7,6 +7,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import SplashScreen from "@/components/SplashScreen";
 import Index from "./pages/Index";
 import ConteudoDetalhePage from "./pages/ConteudoDetalhePage";
+import GestaoArtigosPage from "./pages/admin/GestaoArtigosPage";
+import ArtigoFormPage from "./pages/admin/ArtigoFormPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -34,6 +36,9 @@ const App = () => {
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/conteudos/:id" element={<ConteudoDetalhePage />} />
+            <Route path="/gestao/artigos" element={<GestaoArtigosPage />} />
+            <Route path="/gestao/artigos/novo" element={<ArtigoFormPage />} />
+            <Route path="/gestao/artigos/:id/editar" element={<ArtigoFormPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

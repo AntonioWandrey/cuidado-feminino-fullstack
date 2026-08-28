@@ -30,7 +30,12 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
-import { getPrevisao, getCiclos, registrarCiclo } from "@/services/cicloService";
+import {
+  encerrarCiclo,
+  getPrevisao,
+  getCiclos,
+  registrarCiclo,
+} from "@/services/cicloService";
 import { getQueixasPorPeriodo } from "@/services/queixaService";
 import type { PrevisaoResponse, RegistroQueixaResponse } from "@/types";
 import { cn } from "@/lib/utils";
@@ -131,6 +136,7 @@ const CalendarioPage = () => {
   const [selectedDay, setSelectedDay] = useState<Date | undefined>(new Date());
   const [mesAtual, setMesAtual] = useState<Date>(new Date());
   const [mostrarLegenda, setMostrarLegenda] = useState(false);
+  const [mostrarTodosCiclos, setMostrarTodosCiclos] = useState(false);
   const [mostrarFormLembrete, setMostrarFormLembrete] = useState(false);
   const [mostrarModalQueixa, setMostrarModalQueixa] = useState(false);
   const [lembretes, setLembretes] = useState<Lembrete[]>([]);
@@ -162,28 +168,42 @@ const CalendarioPage = () => {
     retry: 1,
   });
 
-  const { mutate: registrar, isPending: registrando } = useMutation({
+  const atualizarDadosDoCiclo = () => {
+    queryClient.invalidateQueries({ queryKey: ["ciclos"] });
+    queryClient.invalidateQueries({ queryKey: ["previsao"] });
+  };
+
+  const mensagemErro = (error: unknown) =>
+    error instanceof Error ? error.message : "Não foi possível salvar o período.";
+
+  const { mutate: registrar, isPending: iniciando } = useMutation({
     mutationFn: (dataInicio: string) => registrarCiclo({ dataInicio }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["ciclos"] });
-      queryClient.invalidateQueries({ queryKey: ["previsao"] });
-      toast.success("Período registrado com sucesso! 🌸");
+      atualizarDadosDoCiclo();
+      toast.success("Início do período salvo neste dispositivo.");
     },
-    onError: (error: any) => {
-      const msg =
-        error?.response?.data?.mensagem ??
-        "Erro ao registrar. Verifique se há um ciclo aberto.";
-      toast.error(msg);
+    onError: (error) => toast.error(mensagemErro(error)),
+  });
+
+  const { mutate: encerrar, isPending: encerrando } = useMutation({
+    mutationFn: ({ id, dataFim }: { id: number; dataFim: string }) =>
+      encerrarCiclo(id, dataFim),
+    onSuccess: () => {
+      atualizarDadosDoCiclo();
+      toast.success("Período encerrado e previsão atualizada.");
     },
+    onError: (error) => toast.error(mensagemErro(error)),
   });
 
   // ─── dias computados ────────────────────────────────────────────────────────
   const ciclosDays = useMemo(
     () =>
       (ciclos ?? [])
-        .filter((c) => c.dataFim)
         .flatMap((c) =>
-          safeInterval(parseISO(c.dataInicio), parseISO(c.dataFim!))
+          safeInterval(
+            parseISO(c.dataInicio),
+            parseISO(c.dataFim ?? format(new Date(), "yyyy-MM-dd"))
+          )
         ),
     [ciclos]
   );
@@ -247,6 +267,16 @@ const CalendarioPage = () => {
     [selectedDay, previsao]
   );
 
+  const cicloDoDia = useMemo(() => {
+    if (!selectedDay) return undefined;
+    const dia = format(selectedDay, "yyyy-MM-dd");
+    const hoje = format(new Date(), "yyyy-MM-dd");
+    return (ciclos ?? []).find(
+      (ciclo) =>
+        dia >= ciclo.dataInicio && dia <= (ciclo.dataFim ?? hoje)
+    );
+  }, [selectedDay, ciclos]);
+
   const lembretesDodia = useMemo(() => {
     if (!selectedDay) return [];
     const dayStr = format(selectedDay, "yyyy-MM-dd");
@@ -263,7 +293,14 @@ const CalendarioPage = () => {
   const ehPassadoOuHoje =
     selectedDay && !isAfter(startOfDay(selectedDay), startOfDay(new Date()));
 
-  const temCicloAberto = (ciclos ?? []).some((c) => c.aberto);
+  const cicloAberto = (ciclos ?? []).find((c) => c.aberto);
+  const temCicloAberto = Boolean(cicloAberto);
+  const dataSelecionada = selectedDay ? format(selectedDay, "yyyy-MM-dd") : "";
+  const acaoCicloDesabilitada = Boolean(
+    !selectedDay ||
+      (cicloAberto && dataSelecionada < cicloAberto.dataInicio) ||
+      (!cicloAberto && cicloDoDia)
+  );
 
   // ─── handlers ───────────────────────────────────────────────────────────────
   const handleAddLembrete = () => {
@@ -284,7 +321,12 @@ const CalendarioPage = () => {
 
   const handleRegistrarPeriodo = () => {
     if (!selectedDay) return;
-    registrar(format(selectedDay, "yyyy-MM-dd"));
+    const data = format(selectedDay, "yyyy-MM-dd");
+    if (cicloAberto) {
+      encerrar({ id: cicloAberto.id, dataFim: data });
+      return;
+    }
+    registrar(data);
   };
 
   // ─── render ─────────────────────────────────────────────────────────────────
@@ -296,6 +338,14 @@ const CalendarioPage = () => {
         <p className="text-sm mt-0.5 text-[#C56682]">
           Toque em um dia para ver detalhes ou registrar eventos
         </p>
+      </div>
+
+      <div className="rounded-2xl px-3 py-2.5 flex gap-2 items-center bg-white border border-[#FBD9E5]">
+        <CalendarCheck size={16} className="text-[#C43A4A] flex-shrink-0" />
+        <div>
+          <p className="text-xs font-bold text-[#3d2529]">Dados salvos neste dispositivo</p>
+          <p className="text-[10px] text-gray-400">O calendário funciona localmente, mesmo sem internet.</p>
+        </div>
       </div>
 
       {/* Aviso sem dados */}
@@ -341,16 +391,18 @@ const CalendarioPage = () => {
           <div
             className="px-4 py-3 flex items-center justify-between"
             style={{
-              backgroundColor: faseDodia ? faseDodia.cor : "#C43A4A",
-              color: faseDodia?.nome === "lutea" ? "#C56682" : "#fff",
+              backgroundColor: cicloDoDia ? "#8b1a2a" : faseDodia ? faseDodia.cor : "#C43A4A",
+              color: !cicloDoDia && faseDodia?.nome === "lutea" ? "#C56682" : "#fff",
             }}
           >
             <div>
               <p className="font-bold text-sm">
                 {format(selectedDay, "EEEE, dd 'de' MMMM", { locale: ptBR })}
               </p>
-              {faseDodia && (
-                <p className="text-xs opacity-90 mt-0.5">{faseDodia.label}</p>
+              {(cicloDoDia || faseDodia) && (
+                <p className="text-xs opacity-90 mt-0.5">
+                  {cicloDoDia ? "Período menstrual registrado" : faseDodia?.label}
+                </p>
               )}
             </div>
             <CalendarDays size={20} className="opacity-80" />
@@ -358,7 +410,17 @@ const CalendarioPage = () => {
 
           <div className="p-4 space-y-3 bg-white">
             {/* Fase do dia */}
-            {faseDodia ? (
+            {cicloDoDia ? (
+              <div className="rounded-xl p-3 flex items-center gap-3 bg-[#FBF4EB]">
+                <div className="w-3 h-3 rounded-full flex-shrink-0 bg-[#8b1a2a]" />
+                <div>
+                  <p className="text-xs font-bold text-[#3d2529]">Período menstrual registrado</p>
+                  <p className="text-xs text-gray-400">
+                    {cicloDoDia.aberto ? "Registro em andamento" : "Dia confirmado no histórico local"}
+                  </p>
+                </div>
+              </div>
+            ) : faseDodia ? (
               <div className="rounded-xl p-3 flex items-center gap-3 bg-[#FBF4EB]">
                 <div
                   className="w-3 h-3 rounded-full flex-shrink-0"
@@ -410,11 +472,17 @@ const CalendarioPage = () => {
               {ehPassadoOuHoje && (
                 <button
                   onClick={handleRegistrarPeriodo}
-                  disabled={registrando}
+                  disabled={iniciando || encerrando || acaoCicloDesabilitada}
                   className="flex-1 flex items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-semibold transition-opacity active:opacity-70 disabled:opacity-50 bg-[#C43A4A] text-white"
                 >
                   <Droplets size={14} />
-                  {registrando ? "Registrando..." : "Registrar período"}
+                  {iniciando
+                    ? "Salvando início..."
+                    : encerrando
+                    ? "Encerrando..."
+                    : cicloAberto
+                    ? "Encerrar período"
+                    : "Registrar início do período"}
                 </button>
               )}
 
@@ -555,7 +623,7 @@ const CalendarioPage = () => {
             </p>
           </div>
           <div className="space-y-2">
-            {ciclos.slice(0, 3).map((c) => (
+            {(mostrarTodosCiclos ? ciclos : ciclos.slice(0, 3)).map((c) => (
               <div
                 key={c.id}
                 className="flex justify-between items-center text-xs"
@@ -573,11 +641,21 @@ const CalendarioPage = () => {
                       : "bg-[#f0fdf4] text-green-600"
                   }`}
                 >
-                  {c.aberto ? "Aberto" : `${c.duracaoDias ?? "?"} dias`}
+                  {c.aberto
+                    ? "Em andamento"
+                    : `${c.duracaoDias ?? "?"} ${c.duracaoDias === 1 ? "dia" : "dias"}`}
                 </span>
               </div>
             ))}
           </div>
+          {ciclos.length > 3 && (
+            <button
+              onClick={() => setMostrarTodosCiclos((valor) => !valor)}
+              className="w-full mt-3 pt-2 border-t border-[#FBD9E5] text-xs font-semibold text-[#C56682]"
+            >
+              {mostrarTodosCiclos ? "Mostrar menos" : `Ver todos os ${ciclos.length} ciclos`}
+            </button>
+          )}
           {temCicloAberto && (
             <p className="text-xs mt-3 p-2 rounded-xl text-center bg-[#FBD9E5] text-[#C43A4A]">
               ⚠️ Há um ciclo em aberto. Encerre-o antes de registrar um novo.

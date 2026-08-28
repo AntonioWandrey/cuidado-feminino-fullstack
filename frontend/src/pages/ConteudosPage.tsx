@@ -1,103 +1,53 @@
-import { useState, useEffect, useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import {
-  Search,
-  Clock,
-  ChevronRight,
-  BookOpen,
-  X,
-} from "lucide-react";
-import { getConteudos, buscarConteudos } from "@/services/conteudoService";
+import { BookOpen, ChevronRight, Clock, Search, X } from "lucide-react";
+
 import { getCategorias } from "@/services/categoriaService";
+import { buscarConteudos, getConteudos } from "@/services/conteudoService";
+import { isSafeImageUrl } from "@/lib/richText";
 import type { ConteudoEducativo } from "@/types";
 
 const TAGS_POPULARES = [
-  "saúde",
-  "SUS",
-  "prevenção",
-  "hormônios",
-  "bem-estar",
-  "autocuidado",
-  "ciclo",
-  "consultas",
+  "saúde", "SUS", "prevenção", "hormônios", "bem-estar", "autocuidado", "ciclo", "consultas",
 ];
 
-const MOCK_CONTEUDOS: ConteudoEducativo[] = [
-  {
-    id: 0,
-    categoriaId: 1,
-    categoriaNome: "Queixas Ginecológicas",
-    titulo: "Corrimento Vaginal",
-    subtitulo: "O que é normal, quando se preocupar e como cuidar",
-    corpo: "Backend ainda iniciando... Inicie o servidor para ver os conteúdos reais.",
-    palavrasChave: "corrimento,saúde,ginecologia",
-    tempoLeituraMin: 4,
-    fonteReferencia: null,
-    imagemCapaUrl: null,
-    ativo: true,
-    destaque: false,
-    perfilAlvo: "TODAS",
-    criadoEm: new Date().toISOString(),
-    atualizadoEm: null,
-  },
-  {
-    id: 0,
-    categoriaId: 2,
-    categoriaNome: "Ciclo Menstrual",
-    titulo: "Conheça Seu Ciclo Menstrual",
-    subtitulo: "Fases do ciclo, o que é normal e como registrar",
-    corpo: "Backend ainda iniciando...",
-    palavrasChave: "ciclo,menstruação,fases",
-    tempoLeituraMin: 5,
-    fonteReferencia: null,
-    imagemCapaUrl: null,
-    ativo: true,
-    destaque: true,
-    perfilAlvo: "TODAS",
-    criadoEm: new Date().toISOString(),
-    atualizadoEm: null,
-  },
-];
+const DEMO_QUERY_OPTIONS = {
+  staleTime: 0,
+  refetchOnMount: "always" as const,
+  refetchOnWindowFocus: true,
+  refetchInterval: 5_000,
+  retry: false,
+};
 
-const ConteudoCard = ({
-  conteudo,
-  onClick,
-}: {
-  conteudo: ConteudoEducativo;
-  onClick: () => void;
-}) => (
-  <button
-    onClick={onClick}
-    className="w-full text-left rounded-2xl p-4 shadow-sm flex gap-3 items-start active:scale-[0.98] transition-transform bg-white border border-[#FBD9E5]"
-  >
-    <div className="flex-1 min-w-0">
-      <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-        <span className="text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap bg-[#FBD9E5] text-[#C43A4A]">
-          {conteudo.categoriaNome}
-        </span>
-        {conteudo.tempoLeituraMin && (
-          <span className="text-xs flex items-center gap-1 text-gray-400">
-            <Clock size={11} />
-            {conteudo.tempoLeituraMin} min
-          </span>
-        )}
-        {conteudo.destaque && (
-          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[#E7A48C] text-white">
-            ✨ Destaque
-          </span>
-        )}
-      </div>
-      <p className="font-bold text-sm mb-1 text-[#3d2529]">{conteudo.titulo}</p>
-      {conteudo.subtitulo && (
-        <p className="text-xs line-clamp-2 leading-relaxed text-[#6b5a5e]">
-          {conteudo.subtitulo}
-        </p>
+const ConteudoCard = ({ conteudo, onClick }: { conteudo: ConteudoEducativo; onClick: () => void }) => {
+  const [coverFailed, setCoverFailed] = useState(false);
+  const showCover = Boolean(
+    conteudo.imagemCapaUrl && isSafeImageUrl(conteudo.imagemCapaUrl) && !coverFailed,
+  );
+
+  return (
+    <button type="button" onClick={onClick} className="w-full overflow-hidden rounded-xl border border-stone-200 bg-white text-left shadow-sm transition-transform active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-editorial-primary">
+      {showCover ? (
+        <img src={conteudo.imagemCapaUrl as string} alt={`Capa do artigo ${conteudo.titulo}`} loading="lazy" onError={() => setCoverFailed(true)} className="aspect-[16/7] w-full object-cover" />
+      ) : (
+        <div className="grid aspect-[16/5] w-full place-items-center bg-editorial-soft" aria-hidden="true"><BookOpen className="text-editorial-primary" size={24} /></div>
       )}
-    </div>
-    <ChevronRight size={18} className="flex-shrink-0 mt-1 text-[#C56682]" />
-  </button>
-);
+      <div className="flex items-start gap-3 p-4">
+        <div className="min-w-0 flex-1">
+          <div className="mb-2 flex flex-wrap items-center gap-2">
+            <span className="rounded-full bg-editorial-soft px-2 py-0.5 text-xs font-semibold text-editorial-primary">{conteudo.categoriaNome}</span>
+            {conteudo.tempoLeituraMin && <span className="flex items-center gap-1 text-xs text-editorial-muted"><Clock size={12} aria-hidden="true" />{conteudo.tempoLeituraMin} min</span>}
+            {conteudo.destaque && <span className="rounded-full bg-editorial-accent px-2 py-0.5 text-[0.7rem] font-semibold text-editorial-text">Destaque</span>}
+          </div>
+          <p className="font-bold text-editorial-text">{conteudo.titulo}</p>
+          {conteudo.subtitulo && <p className="mt-1 line-clamp-2 text-sm leading-relaxed text-editorial-muted">{conteudo.subtitulo}</p>}
+        </div>
+        <ChevronRight size={18} className="mt-1 shrink-0 text-editorial-primary" aria-hidden="true" />
+      </div>
+    </button>
+  );
+};
 
 const ConteudosPage = () => {
   const navigate = useNavigate();
@@ -106,154 +56,60 @@ const ConteudosPage = () => {
   const [categoriaAtiva, setCategoriaAtiva] = useState<number | null>(null);
 
   useEffect(() => {
-    const timer = setTimeout(() => setDebouncedBusca(busca), 500);
+    const timer = setTimeout(() => setDebouncedBusca(busca.trim()), 500);
     return () => clearTimeout(timer);
   }, [busca]);
 
-  const { data: categorias } = useQuery({
-    queryKey: ["categorias"],
-    queryFn: getCategorias,
-    retry: 1,
-  });
-
-  const { data: conteudosBusca, isLoading: loadingBusca } = useQuery({
+  const categoriasQuery = useQuery({ queryKey: ["categorias"], queryFn: getCategorias, retry: 1 });
+  const searchQuery = useQuery({
     queryKey: ["conteudos-busca", debouncedBusca],
     queryFn: () => buscarConteudos(debouncedBusca),
     enabled: debouncedBusca.length >= 2,
-    retry: 1,
+    ...DEMO_QUERY_OPTIONS,
   });
-
-  const { data: conteudosFiltrados, isLoading: loadingFiltro } = useQuery({
+  const listQuery = useQuery({
     queryKey: ["conteudos", categoriaAtiva],
-    queryFn: () =>
-      getConteudos(categoriaAtiva ? { categoriaId: categoriaAtiva } : undefined),
+    queryFn: () => getConteudos(categoriaAtiva ? { categoriaId: categoriaAtiva } : undefined),
     enabled: debouncedBusca.length < 2,
-    retry: 1,
+    ...DEMO_QUERY_OPTIONS,
   });
 
-  const conteudos =
-    debouncedBusca.length >= 2 ? conteudosBusca : conteudosFiltrados;
-
-  const isLoading = debouncedBusca.length >= 2 ? loadingBusca : loadingFiltro;
-
-  const handleTagClick = useCallback((tag: string) => {
-    setBusca(tag);
-  }, []);
-
-  const handleConteudoClick = (conteudo: ConteudoEducativo) => {
-    if (conteudo.id === 0) return;
-    navigate(`/conteudos/${conteudo.id}`);
-  };
-
-  const lista = conteudos ?? (isLoading ? [] : MOCK_CONTEUDOS);
+  const activeQuery = debouncedBusca.length >= 2 ? searchQuery : listQuery;
+  const conteudos = activeQuery.data ?? [];
+  const handleTagClick = useCallback((tag: string) => setBusca(tag), []);
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-bold text-[#3d2529]">Conteúdos</h1>
-        <p className="text-sm mt-0.5 text-[#C56682]">
-          Informações de saúde baseadas em evidências
-        </p>
+      <div><h1 className="text-2xl font-bold text-editorial-text">Conteúdos</h1><p className="mt-0.5 text-sm text-editorial-primary">Informações de saúde baseadas em evidências</p></div>
+
+      <div className="flex items-center gap-2 rounded-xl border border-stone-200 bg-white px-4 py-3 focus-within:ring-2 focus-within:ring-editorial-primary">
+        <Search size={16} className="text-editorial-primary" aria-hidden="true" />
+        <input type="search" aria-label="Buscar conteúdo" placeholder="Buscar conteúdo..." value={busca} onChange={(event) => setBusca(event.target.value)} className="min-w-0 flex-1 bg-transparent text-sm text-editorial-text outline-none placeholder:text-stone-400" />
+        {busca && <button type="button" aria-label="Limpar busca" onClick={() => setBusca("")} className="rounded p-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-editorial-primary"><X size={16} className="text-editorial-muted" /></button>}
       </div>
 
-      <div className="flex items-center gap-2 rounded-2xl px-4 py-3 bg-white border border-[#FBD9E5]">
-        <Search size={16} className="text-[#C56682]" />
-        <input
-          type="text"
-          placeholder="Buscar conteúdo..."
-          value={busca}
-          onChange={(e) => setBusca(e.target.value)}
-          className="flex-1 bg-transparent text-sm outline-none placeholder:text-gray-400 text-[#3d2529]"
-        />
-        {busca && (
-          <button onClick={() => setBusca("")}>
-            <X size={16} className="text-gray-400" />
-          </button>
-        )}
+      <div className="flex gap-2 overflow-x-auto pb-1">
+        {TAGS_POPULARES.map((tag) => <button type="button" key={tag} onClick={() => handleTagClick(tag)} className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-editorial-primary ${busca === tag ? "bg-editorial-primary text-white" : "bg-editorial-soft text-editorial-primary"}`}>#{tag}</button>)}
       </div>
 
-      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-        {TAGS_POPULARES.map((tag) => (
-          <button
-            key={tag}
-            onClick={() => handleTagClick(tag)}
-            className={`flex-shrink-0 text-xs px-3 py-1.5 rounded-full font-medium transition-all ${
-              busca === tag
-                ? "bg-[#C43A4A] text-white"
-                : "bg-[#FBD9E5] text-[#C43A4A]"
-            }`}
-          >
-            #{tag}
-          </button>
-        ))}
-      </div>
-
-      {categorias && categorias.length > 0 && debouncedBusca.length < 2 && (
-        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-          <button
-            onClick={() => setCategoriaAtiva(null)}
-            className={`flex-shrink-0 text-xs px-3 py-1.5 rounded-full font-medium ${
-              !categoriaAtiva
-                ? "bg-[#C43A4A] text-white"
-                : "bg-white text-[#6b5a5e] border border-[#FBD9E5]"
-            }`}
-          >
-            Todas
-          </button>
-          {categorias.map((cat) => (
-            <button
-              key={cat.id}
-              onClick={() =>
-                setCategoriaAtiva(cat.id === categoriaAtiva ? null : cat.id)
-              }
-              className={`flex-shrink-0 text-xs px-3 py-1.5 rounded-full font-medium whitespace-nowrap ${
-                categoriaAtiva === cat.id
-                  ? "bg-[#C43A4A] text-white"
-                  : "bg-white text-[#6b5a5e] border border-[#FBD9E5]"
-              }`}
-            >
-              {cat.nome}
-            </button>
-          ))}
+      {categoriasQuery.data && categoriasQuery.data.length > 0 && debouncedBusca.length < 2 && (
+        <div className="flex gap-2 overflow-x-auto pb-1" aria-label="Filtrar por categoria">
+          <button type="button" onClick={() => setCategoriaAtiva(null)} className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold ${!categoriaAtiva ? "bg-editorial-primary text-white" : "border border-stone-200 bg-white text-editorial-muted"}`}>Todas</button>
+          {categoriasQuery.data.filter((category) => category.ativo).map((category) => <button type="button" key={category.id} onClick={() => setCategoriaAtiva(category.id === categoriaAtiva ? null : category.id)} className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold ${categoriaAtiva === category.id ? "bg-editorial-primary text-white" : "border border-stone-200 bg-white text-editorial-muted"}`}>{category.nome}</button>)}
         </div>
       )}
 
-      {isLoading ? (
-        <div className="space-y-3">
-          {[1, 2, 3].map((i) => (
-            <div
-              key={i}
-              className="rounded-2xl p-4 animate-pulse bg-[#FBD9E5] h-[88px]"
-            />
-          ))}
-        </div>
-      ) : lista.length === 0 ? (
-        <div className="text-center py-10">
-          <BookOpen size={40} className="mx-auto mb-3 text-[#FBD9E5]" />
-          <p className="text-sm font-medium text-[#C56682]">
-            Nenhum conteúdo encontrado
-          </p>
-          <p className="text-xs mt-1 text-gray-400">
-            Tente outro termo ou categoria
-          </p>
-        </div>
+      {activeQuery.isPending ? (
+        <div className="space-y-3" role="status" aria-label="Carregando conteúdos">{[1, 2, 3].map((item) => <div key={item} className="h-36 animate-pulse rounded-xl bg-editorial-soft" />)}</div>
+      ) : activeQuery.isError ? (
+        <div className="rounded-xl border border-red-200 bg-white p-6 text-center"><p className="font-semibold text-editorial-error">Não foi possível carregar os conteúdos.</p><p className="mt-1 text-sm text-editorial-muted">Verifique a conexão com o servidor.</p><button type="button" className="mt-4 rounded-lg bg-editorial-primary px-4 py-2 font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-editorial-primary" onClick={() => activeQuery.refetch()}>Tentar novamente</button></div>
+      ) : conteudos.length === 0 ? (
+        <div className="py-10 text-center"><BookOpen size={40} className="mx-auto mb-3 text-editorial-accent" aria-hidden="true" /><p className="text-sm font-semibold text-editorial-primary">Nenhum conteúdo encontrado</p><p className="mt-1 text-xs text-editorial-muted">Tente outro termo ou categoria</p></div>
       ) : (
-        <div className="space-y-3">
-          {lista.map((c, idx) => (
-            <ConteudoCard
-              key={c.id || idx}
-              conteudo={c}
-              onClick={() => handleConteudoClick(c)}
-            />
-          ))}
-        </div>
+        <div className="space-y-3">{conteudos.map((conteudo) => <ConteudoCard key={conteudo.id} conteudo={conteudo} onClick={() => navigate(`/conteudos/${conteudo.id}`)} />)}</div>
       )}
 
-      <p className="text-center text-xs py-3 text-gray-400">
-        ⚠️ Essas informações não substituem avaliação médica.
-        <br />
-        Procure sempre a UBS para confirmação e acompanhamento.
-      </p>
+      <p className="py-3 text-center text-xs text-editorial-muted">⚠️ Essas informações não substituem avaliação médica.<br />Procure sempre a UBS para confirmação e acompanhamento.</p>
     </div>
   );
 };

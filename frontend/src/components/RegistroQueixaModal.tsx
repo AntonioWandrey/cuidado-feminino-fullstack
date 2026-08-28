@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { isAxiosError } from "axios";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
@@ -87,8 +88,11 @@ const RegistroQueixaModal = ({ dia, queixasDodia, onClose }: Props) => {
       setDescricao("");
       setMostrarForm(false);
     },
-    onError: (err: any) => {
-      toast.error(err?.response?.data?.mensagem ?? "Erro ao registrar queixa");
+    onError: (err: unknown) => {
+      const mensagem = isAxiosError<{ mensagem?: string }>(err)
+        ? err.response?.data?.mensagem
+        : undefined;
+      toast.error(mensagem ?? "Erro ao registrar queixa");
     },
   });
 
